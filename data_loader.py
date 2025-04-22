@@ -7,22 +7,24 @@ def load_data(
     file_paths, column_names=None, missing_values=["?"], header=None, skiprows=None
 ):
     """
-    Load dataset(s) from one or more CSV files into a single pandas DataFrame.
+    Loads one or more CSV files into a single pandas DataFrame.
 
     Args:
-        file_paths (Union[str, List[str]]): Path or list of paths to CSV file(s) to be loaded.
-        column_names (Optional[List[str]], optional): List of column names to assign if the CSV files do not have headers. Ignored if 'header' is specified. Defaults to None.
-        missing_values (Optional[List[str]], optional): List of string values to interpret as missing/NaN. Defaults to ["?"].
-        header (Optional[int], optional): Row number to use as column headers (0-indexed). Set to None if there is no header row in the file. Defaults to None.
-        skiprows (Optional[int], optional): Number of lines to skip at the beginning of the file. Defaults to None.
+        file_paths (str or list of str): Path or list of paths to CSV file(s).
+        column_names (list, optional): Column names to assign if the file has no header.
+            Ignored if 'header' is specified. Defaults to None.
+        missing_values (list, optional): Strings to interpret as missing/NaN. Defaults to ["?"].
+        header (int or None, optional): Row number to use as column headers (0-indexed).
+            Set to None if the file has no header. Defaults to None.
+        skiprows (int or None, optional): Number of lines to skip at the start of the file. Defaults to None.
 
     Raises:
         FileNotFoundError: If any specified file path does not exist.
-        ValueError: If any specified file is empty.
-        ValueError: If an error occurs while reading a file (e.g., parsing errors, encoding issues).
+        ValueError: If any specified file is empty or cannot be read.
 
     Returns:
-        pd.DataFrame: A pandas DataFrame containing the loaded data. If multiple files are provided, they are concatenated into a single DataFrame.
+        pd.DataFrame: A pandas DataFrame containing the loaded data.
+            If multiple files are provided, they are concatenated into a single DataFrame.
     """
     if header is not None and column_names is not None:
         warnings.warn(
