@@ -10,7 +10,7 @@ from scipy.stats import zscore
 warnings.filterwarnings("ignore")
 
 
-def detect_missing_values(df):
+def detect_missing_values_count(df):
     return df.isnull().sum()
 
 
@@ -113,7 +113,7 @@ def visualize_distributions(df, save_path="plots"):
 def profile_data(df):
     print("🔍 Profiling started...\n")
 
-    missing = detect_missing_values(df)
+    missing = detect_missing_values_count(df)
     print("✅ Missing values detected.")
 
     duplicates = detect_duplicates(df)

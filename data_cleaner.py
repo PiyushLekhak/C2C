@@ -3,7 +3,7 @@ import numpy as np
 import warnings
 
 
-def clean_missing_values(df, strategy="mean", threshold=0.5):
+def impute_missing_values(df, strategy="mean", threshold=0.5):
     """
     Handles missing values by:
     - Dropping columns with too many missing values
@@ -113,7 +113,7 @@ def clean_data(
 ):
     print("🧼 Starting full cleaning pipeline...")
 
-    df = clean_missing_values(df, strategy=strategy, threshold=missing_thresh)
+    df = impute_missing_values(df, strategy=strategy, threshold=missing_thresh)
     print("✅ Missing values cleaned.")
 
     df = clean_duplicates(df)
