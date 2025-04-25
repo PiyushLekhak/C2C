@@ -10,6 +10,9 @@ from sklearn.metrics import (
 from sklearn.utils.multiclass import type_of_target
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split
+from event_logger import get_logger
+
+logger = get_logger(module_name="model_evaluator")
 
 
 def evaluate_model(y_true, y_pred):
@@ -32,7 +35,7 @@ def evaluate_classification(y_true, y_pred):
             y_true, y_pred, output_dict=True
         ),
     }
-    print("✅ Classification evaluation completed.")
+    logger.log("Classification evaluation completed.")
     return metrics
 
 
@@ -44,25 +47,13 @@ def evaluate_regression(y_true, y_pred):
         "RMSE": rmse,
         "R² Score": r2,
     }
-    print("✅ Regression evaluation completed.")
+    logger.log("Regression evaluation completed.")
     return metrics
 
 
 def evaluate_with_random_forest(
     X_raw, y_raw, X_clean, y_clean, test_size=0.2, random_state=42
 ):
-    """
-    Trains and evaluates a Random Forest model on raw and cleaned data.
-
-    Args:
-        X_raw (pd.DataFrame): Raw feature data.
-        y_raw (pd.Series): Raw target data.
-        X_clean (pd.DataFrame): Cleaned feature data.
-        y_clean (pd.Series): Cleaned target data.
-
-    Returns:
-        dict: Evaluation results for both raw and cleaned data.
-    """
     target_type = type_of_target(y_raw)
 
     if target_type in ["binary", "multiclass"]:
@@ -74,7 +65,7 @@ def evaluate_with_random_forest(
     else:
         raise ValueError(f"Unsupported target type: {target_type}")
 
-    # Split raw
+    # Raw data
     X_train_raw, X_test_raw, y_train_raw, y_test_raw = train_test_split(
         X_raw, y_raw, test_size=test_size, random_state=random_state
     )
@@ -83,7 +74,7 @@ def evaluate_with_random_forest(
     y_pred_raw = model_raw.predict(X_test_raw)
     raw_metrics = evaluator(y_test_raw, y_pred_raw)
 
-    # Split clean
+    # Clean data
     X_train_clean, X_test_clean, y_train_clean, y_test_clean = train_test_split(
         X_clean, y_clean, test_size=test_size, random_state=random_state
     )
@@ -92,6 +83,7 @@ def evaluate_with_random_forest(
     y_pred_clean = model_clean.predict(X_test_clean)
     clean_metrics = evaluator(y_test_clean, y_pred_clean)
 
+    logger.log("Model evaluation on raw and cleaned data complete.")
     return {
         "Raw Data Evaluation": raw_metrics,
         "Cleaned Data Evaluation": clean_metrics,

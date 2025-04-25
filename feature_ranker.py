@@ -4,6 +4,9 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 import os
+from event_logger import get_logger
+
+logger = get_logger(module_name="feature_ranker")
 
 
 def rank_features(X, y, task_type="classification", save_path="feature_importance.png"):
@@ -19,12 +22,11 @@ def rank_features(X, y, task_type="classification", save_path="feature_importanc
     Returns:
         pd.Series: Sorted feature importance scores.
     """
-    # Handle categorical targets if needed
+    # Handle categorical targets
     if y.dtype == "object" or y.dtype.name == "category":
         le = LabelEncoder()
         y = le.fit_transform(y)
 
-    # Initialize appropriate model
     if task_type == "classification":
         model = RandomForestClassifier(random_state=42)
     elif task_type == "regression":
@@ -32,11 +34,11 @@ def rank_features(X, y, task_type="classification", save_path="feature_importanc
     else:
         raise ValueError("Invalid task_type. Choose 'classification' or 'regression'.")
 
-    model.fit(X, y)  # Need to fit the model to get feature importances
+    model.fit(X, y)
     importances = pd.Series(model.feature_importances_, index=X.columns)
     importances_sorted = importances.sort_values(ascending=False)
 
-    # Plot
+    # Save plot
     plt.figure(figsize=(10, 6))
     importances_sorted.plot(kind="bar")
     plt.title("Feature Importance Ranking")
@@ -46,5 +48,5 @@ def rank_features(X, y, task_type="classification", save_path="feature_importanc
     plt.savefig(save_path)
     plt.close()
 
-    print(f"✅ Feature importance plot saved to {save_path}")
+    logger.log(f"Feature importance plot saved to {save_path}")
     return importances_sorted
