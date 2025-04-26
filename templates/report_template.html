@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pipeline Report - {{ timestamp }}</title>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        margin: 30px;
+        background: #f7f9fc;
+      }
+      h1,
+      h2 {
+        color: #333;
+      }
+      .section {
+        margin-bottom: 40px;
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 0px 5px #ccc;
+      }
+      img {
+        max-width: 600px;
+        margin: 20px 0;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #eaeaea;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>📊 Full Pipeline Report</h1>
+    <p><strong>Run Timestamp:</strong> {{ timestamp }}</p>
+
+    <div class="section">
+      <h2>1. Data Profiling</h2>
+      <table>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+        <tr>
+          <td>Missing Values</td>
+          <td>{{ profiling.missing_values }}</td>
+        </tr>
+        <tr>
+          <td>Duplicate Rows</td>
+          <td>{{ profiling.duplicate_rows }}</td>
+        </tr>
+        <tr>
+          <td>Outliers</td>
+          <td>{{ profiling.outliers }}</td>
+        </tr>
+        <tr>
+          <td>Inconsistencies</td>
+          <td>{{ profiling.inconsistencies }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>2. Data Cleaning Summary</h2>
+      <pre>{{ cleaning | pprint }}</pre>
+    </div>
+
+    <div class="section">
+      <h2>3. Anomaly Detection</h2>
+      <pre>{{ anomaly | pprint }}</pre>
+      {% if anomaly.anomaly_plot_path %}
+      <img src="{{ anomaly.anomaly_plot_path }}" alt="Anomaly Scores" />
+      {% else %}
+      <p><em>No anomaly plot generated (small dataset or skipped).</em></p>
+      {% endif %}
+    </div>
+
+    <div class="section">
+      <h2>4. Feature Importance</h2>
+      <h4>Before Cleaning:</h4>
+      {% if feature_importance_before_path %}
+      <img
+        src="{{ feature_importance_before_path }}"
+        alt="Feature Importance Before"
+      />
+      {% endif %}
+      <h4>After Cleaning:</h4>
+      {% if feature_importance_after_path %}
+      <img
+        src="{{ feature_importance_after_path }}"
+        alt="Feature Importance After"
+      />
+      {% endif %}
+    </div>
+
+    <div class="section">
+      <h2>5. Model Evaluation</h2>
+      <h3>Raw Data Evaluation:</h3>
+      <pre>{{ evaluation['Raw Data Evaluation'] | pprint }}</pre>
+      <h3>Cleaned Data Evaluation:</h3>
+      <pre>{{ evaluation['Cleaned Data Evaluation'] | pprint }}</pre>
+      {% if evaluation['Performance Plot'] %}
+      <img src="{{ evaluation['Performance Plot'] }}" alt="Model Performance" />
+      {% endif %}
+    </div>
+
+    <div class="section">
+      <h2>6. Policy & Adaptation Info</h2>
+      <pre>{{ policy | pprint }}</pre>
+    </div>
+  </body>
+</html>

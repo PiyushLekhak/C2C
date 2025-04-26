@@ -1,2 +1,6 @@
 .venv/
-data/
+datasets/
+logs/
+__pycache__/
+plots/
+reports/

@@ -6,12 +6,11 @@ import warnings
 import os
 from scipy.stats import zscore
 
-# Ignore warnings for cleaner output
 warnings.filterwarnings("ignore")
 
 
 def detect_missing_values_count(df):
-    return df.isnull().sum()
+    return df.isnull().sum().to_dict()
 
 
 def detect_duplicates(df):
@@ -19,21 +18,6 @@ def detect_duplicates(df):
 
 
 def detect_outliers(df):
-    """
-    Detects outliers in numerical columns using IQR or Z-score based on skewness.
-
-    For each numeric column:
-        - If skewness > 1 or < -1, uses the IQR method.
-        - Otherwise, uses the Z-score method.
-
-    Args:
-        df (pd.DataFrame): The input DataFrame containing numeric columns.
-
-    Returns:
-        dict: A dictionary where keys are column names and values are dictionaries
-                with outlier count and the method used.
-        Format: { 'column_name': { 'count': int, 'method': str } }
-    """
     outlier_info = {}
     numeric_df = df.select_dtypes(include=[np.number])
 
@@ -42,14 +26,12 @@ def detect_outliers(df):
         skew = col_data.skew()
 
         if abs(skew) > 1:
-            # Use IQR
             Q1 = col_data.quantile(0.25)
             Q3 = col_data.quantile(0.75)
             IQR = Q3 - Q1
             mask = (col_data < (Q1 - 1.5 * IQR)) | (col_data > (Q3 + 1.5 * IQR))
             method = "IQR"
         else:
-            # Use Z-score
             z_scores = zscore(col_data)
             mask = np.abs(z_scores) > 3
             method = "Z-score"
@@ -63,38 +45,30 @@ def detect_outliers(df):
 
 
 def check_inconsistencies(df, category_threshold=10):
-    """
-    Detects inconsistent categorical values in a DataFrame based on case and whitespace differences.
-
-    Args:
-        df (pd.DataFrame): The input DataFrame to check.
-        category_threshold (int, optional): Maximum number of unique values in a column
-            to consider it potentially categorical. Defaults to 10.
-
-    Returns:
-        dict: A dictionary where keys are column names with inconsistencies,
-            and values are lists of original unique values in those columns.
-    """
     inconsistencies = {}
     categorical = df.select_dtypes(include=["object", "category"])
 
     for col in categorical.columns:
         unique_values = df[col].dropna().unique()
         if len(unique_values) <= category_threshold:
-            normalized_values = [str(v).strip().lower() for v in unique_values]
-            if len(set(normalized_values)) != len(unique_values):
+            normalized = [str(v).strip().lower() for v in unique_values]
+            if len(set(normalized)) != len(unique_values):
                 inconsistencies[col] = list(unique_values)
 
     return inconsistencies
 
 
 def generate_summary_statistics(df):
-    return df.describe(include="all")
+    return df.describe(include="all").to_dict()
 
 
 def visualize_distributions(df, save_path="plots"):
     os.makedirs(save_path, exist_ok=True)
-    for col in df.select_dtypes(include=[np.number]).columns:
+    saved_plots = []
+
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+
+    for col in numeric_cols:
         plt.figure(figsize=(12, 5))
 
         plt.subplot(1, 2, 1)
@@ -106,11 +80,32 @@ def visualize_distributions(df, save_path="plots"):
         plt.title(f"Boxplot of {col}")
 
         plt.tight_layout()
-        plt.savefig(os.path.join(save_path, f"{col}_distribution.png"))
+        plot_path = os.path.join(save_path, f"{col}_distribution.png")
+        plt.savefig(plot_path)
         plt.close()
 
+        saved_plots.append(plot_path)
 
-def profile_data(df):
+    return saved_plots
+
+
+def visualize_correlation_heatmap(df, save_path="plots"):
+    os.makedirs(save_path, exist_ok=True)
+    corr = df.select_dtypes(include=[np.number]).corr()
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
+    plt.title("Correlation Heatmap")
+    plt.tight_layout()
+
+    plot_path = os.path.join(save_path, "correlation_heatmap.png")
+    plt.savefig(plot_path)
+    plt.close()
+
+    return plot_path
+
+
+def profile_data(df, save_path="plots"):
     print("🔍 Profiling started...\n")
 
     missing = detect_missing_values_count(df)
@@ -120,16 +115,19 @@ def profile_data(df):
     print("✅ Duplicates detected.")
 
     outliers = detect_outliers(df)
-    print("✅ Outliers flagged using IQR/Z-score based on skewness.")
+    print("✅ Outliers flagged.")
 
     inconsistencies = check_inconsistencies(df)
-    print("✅ Categorical inconsistencies flagged.")
+    print("✅ Inconsistencies checked.")
 
     stats = generate_summary_statistics(df)
-    print("✅ Summary statistics generated.")
+    print("✅ Summary stats done.")
 
-    visualize_distributions(df)
-    print("✅ Distributions visualized and saved in /plots folder.\n")
+    dist_plots = visualize_distributions(df, save_path)
+    print("✅ Distribution plots saved.")
+
+    corr_plot = visualize_correlation_heatmap(df, save_path)
+    print("✅ Correlation heatmap saved.\n")
 
     print("✅ Profiling complete.")
 
@@ -139,4 +137,6 @@ def profile_data(df):
         "outliers": outliers,
         "inconsistencies": inconsistencies,
         "summary_stats": stats,
+        "distribution_plots": dist_plots,
+        "correlation_plot": corr_plot,
     }
