@@ -5,47 +5,101 @@
     <title>Pipeline Report - {{ timestamp }}</title>
     <style>
       body {
-        font-family: "Arial", sans-serif;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #121212;
+        color: #e0e0e0;
         margin: 30px;
-        background: #f7f9fc;
       }
       h1,
-      h2 {
-        color: #333;
+      h2,
+      h3,
+      h4 {
+        color: #ffffff;
+        border-bottom: 1px solid #333;
+        padding-bottom: 5px;
+        text-align: center;
       }
       .section {
-        margin-bottom: 40px;
-        background: #fff;
+        margin-bottom: 50px;
         padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0px 0px 5px #ccc;
+        background: #1e1e1e;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
       }
       img {
-        max-width: 600px;
-        margin: 20px 0;
-        border: 1px solid #ccc;
+        max-width: 45%;
+        margin: 10px;
+        border: 1px solid #555;
         border-radius: 8px;
+        display: inline-block;
+        vertical-align: top;
+      }
+      .plots-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
       }
       table {
-        border-collapse: collapse;
         width: 100%;
+        border-collapse: collapse;
         margin-top: 10px;
+        font-size: 18px;
       }
       th,
       td {
-        border: 1px solid #ccc;
-        padding: 8px;
+        border: 1px solid #555;
+        padding: 10px;
         text-align: left;
       }
       th {
-        background-color: #eaeaea;
+        background-color: #2c2c2c;
+      }
+      .scorecard {
+        background-color: #1e88e5;
+        color: white;
+        padding: 15px;
+        margin-bottom: 30px;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 20px;
+      }
+      .center {
+        text-align: center;
+      }
+      .side-by-side {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 20px;
+      }
+      .side-by-side img {
+        max-width: 40%;
+      }
+      .subsection-title {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 22px;
+        border-bottom: 1px dashed #555;
+        padding-bottom: 5px;
       }
     </style>
   </head>
+
   <body>
     <h1>📊 Full Pipeline Report</h1>
-    <p><strong>Run Timestamp:</strong> {{ timestamp }}</p>
 
+  <!-- Scorecard -->
+<div class="scorecard">
+  <strong>✨ Summary: </strong> 
+  {% if evaluation['Cleaned Data Evaluation']['Weighted F1 Score'] > evaluation['Raw Data Evaluation']['Weighted F1 Score'] %}
+    Cleaned Data performed better! 🎯 (Weighted F1: {{ evaluation['Cleaned Data Evaluation']['Weighted F1 Score'] | round(3) }})
+  {% else %}
+    Raw Data performed better. 📈 (Weighted F1: {{ evaluation['Raw Data Evaluation']['Weighted F1 Score'] | round(3) }})
+  {% endif %}
+</div>
+
+    <!-- Profiling -->
     <div class="section">
       <h2>1. Data Profiling</h2>
       <table>
@@ -70,55 +124,138 @@
           <td>{{ profiling.inconsistencies }}</td>
         </tr>
       </table>
+
+      {% if plots.correlation_matrices %}
+      <h4 class="subsection-title">Correlation Matrix</h4>
+      <div class="plots-row">
+        {% for plot in plots.correlation_matrices %}
+        <img src="{{ plot }}" alt="Correlation Matrix" />
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
 
+    <!-- Cleaning Summary -->
     <div class="section">
       <h2>2. Data Cleaning Summary</h2>
-      <pre>{{ cleaning | pprint }}</pre>
+      <table>
+        <tr>
+          <th>Step</th>
+          <th>Details</th>
+        </tr>
+        <tr>
+          <td>Missing Value Handling</td>
+          <td>{{ cleaning.missing_handling }}</td>
+        </tr>
+        <tr>
+          <td>Duplicates Removed</td>
+          <td>{{ cleaning.duplicates_removed }}</td>
+        </tr>
+        <tr>
+          <td>Outlier Handling</td>
+          <td>{{ cleaning.outlier_handling }}</td>
+        </tr>
+        <tr>
+          <td>Inconsistencies Fixed</td>
+          <td>{{ cleaning.inconsistencies_fixed }}</td>
+        </tr>
+      </table>
     </div>
 
+    <!-- Anomaly Detection -->
     <div class="section">
       <h2>3. Anomaly Detection</h2>
-      <pre>{{ anomaly | pprint }}</pre>
-      {% if anomaly.anomaly_plot_path %}
-      <img src="{{ anomaly.anomaly_plot_path }}" alt="Anomaly Scores" />
-      {% else %}
-      <p><em>No anomaly plot generated (small dataset or skipped).</em></p>
+      <table>
+        <tr>
+          <th>Metric</th>
+          <th>Value</th>
+        </tr>
+        <tr>
+          <td>Total Anomalies Flagged</td>
+          <td>{{ anomaly.total_anomalies_flagged }}</td>
+        </tr>
+        <tr>
+          <td>Post Action</td>
+          <td>{{ anomaly.post_action }}</td>
+        </tr>
+        <tr>
+          <td>Contamination Rate</td>
+          <td>{{ anomaly.contamination_rate }}</td>
+        </tr>
+      </table>
+
+      {% if plots.anomaly_distributions %}
+      <h4 class="subsection-title">Anomaly Score Distribution</h4>
+      <div class="plots-row">
+        {% for plot in plots.anomaly_distributions %}
+        <img src="{{ plot }}" alt="Anomaly Score Distribution" />
+        {% endfor %}
+      </div>
       {% endif %}
     </div>
 
+    <!-- Feature Importance -->
     <div class="section">
-      <h2>4. Feature Importance</h2>
-      <h4>Before Cleaning:</h4>
-      {% if feature_importance_before_path %}
-      <img
-        src="{{ feature_importance_before_path }}"
-        alt="Feature Importance Before"
-      />
-      {% endif %}
-      <h4>After Cleaning:</h4>
-      {% if feature_importance_after_path %}
-      <img
-        src="{{ feature_importance_after_path }}"
-        alt="Feature Importance After"
-      />
-      {% endif %}
+      <h2>4. Feature Importance (Before vs After Cleaning)</h2>
+      <div class="side-by-side">
+        <img
+          src="{{ feature_importance_before_path }}"
+          alt="Feature Importance Before Cleaning"
+        />
+        <img
+          src="{{ feature_importance_after_path }}"
+          alt="Feature Importance After Cleaning"
+        />
+      </div>
     </div>
 
+    <!-- Model Evaluation -->
     <div class="section">
       <h2>5. Model Evaluation</h2>
-      <h3>Raw Data Evaluation:</h3>
-      <pre>{{ evaluation['Raw Data Evaluation'] | pprint }}</pre>
-      <h3>Cleaned Data Evaluation:</h3>
-      <pre>{{ evaluation['Cleaned Data Evaluation'] | pprint }}</pre>
+
+      <h4 class="subsection-title">Raw Data Evaluation</h4>
+      <table>
+        {% for key, value in evaluation['Raw Data Evaluation'].items() %}
+        <tr>
+          <td>{{ key }}</td>
+          <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+
+      <h4 class="subsection-title">Cleaned Data Evaluation</h4>
+      <table>
+        {% for key, value in evaluation['Cleaned Data Evaluation'].items() %}
+        <tr>
+          <td>{{ key }}</td>
+          <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+
       {% if evaluation['Performance Plot'] %}
-      <img src="{{ evaluation['Performance Plot'] }}" alt="Model Performance" />
+      <h4 class="subsection-title">Performance Comparison Plot</h4>
+      <div class="center">
+        <img
+          src="{{ evaluation['Performance Plot'] }}"
+          alt="Performance Plot"
+        />
+      </div>
       {% endif %}
     </div>
 
+    <!-- Policy Info -->
     <div class="section">
       <h2>6. Policy & Adaptation Info</h2>
-      <pre>{{ policy | pprint }}</pre>
+      <table>
+        {% for key, value in policy.items() %}
+        <tr>
+          <td>{{ key }}</td>
+          <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+      </table>
     </div>
   </body>
 </html>
+<!-- End of report_template.html -->
