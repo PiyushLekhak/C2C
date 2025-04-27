@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import (
     f1_score,
     accuracy_score,
-    confusion_matrix,
-    classification_report,
     mean_squared_error,
     r2_score,
 )
@@ -53,7 +51,6 @@ def evaluate_classification(y_true, y_pred):
     metrics = {
         "Weighted F1 Score": f1_score(y_true, y_pred, average="weighted"),
         "Accuracy": accuracy_score(y_true, y_pred),
-        "Confusion Matrix": confusion_matrix(y_true, y_pred).tolist(),
     }
     logger.info("Classification evaluation completed.")
     return metrics
@@ -127,6 +124,7 @@ def evaluate_with_random_forest(
     X_raw, y_raw, X_clean, y_clean, test_size=0.2, random_state=42, save_dir="plots"
 ):
     target_type = type_of_target(y_raw)
+    performance_diff = {}
 
     if target_type in ["binary", "multiclass"]:
         ModelClass = RandomForestClassifier
@@ -172,7 +170,32 @@ def evaluate_with_random_forest(
 
     logger.info("Model evaluation on raw and cleaned data complete.")
 
-    # === 4. Plotting comparison ===
+    # === 4. Calculate performance differences ===
+    if "Error" not in raw_metrics and "Error" not in clean_metrics:
+        if target_type in ["binary", "multiclass"]:
+            metrics_to_compare = ["Accuracy", "Weighted F1 Score"]
+        else:
+            metrics_to_compare = ["RMSE", "R² Score"]
+
+        for metric in metrics_to_compare:
+            raw_val = raw_metrics.get(metric)
+            clean_val = clean_metrics.get(metric)
+
+            if raw_val is not None and clean_val is not None:
+                try:
+                    if metric == "RMSE":
+                        # Lower values are better
+                        diff = ((raw_val - clean_val) / raw_val) * 100
+                    else:
+                        # Higher values are better
+                        diff = ((clean_val - raw_val) / raw_val) * 100
+                    performance_diff[f"{metric} % Difference"] = round(diff, 2)
+                except ZeroDivisionError:
+                    performance_diff[f"{metric} % Difference"] = "N/A (div by zero)"
+    else:
+        performance_diff["Error"] = "Could not calculate differences"
+
+    # === 5. Plotting comparison ===
     try:
         perf_plot_path = plot_evaluation_comparison(
             raw_metrics,
@@ -187,5 +210,6 @@ def evaluate_with_random_forest(
     return {
         "Raw Data Evaluation": raw_metrics,
         "Cleaned Data Evaluation": clean_metrics,
+        "Performance Difference (%)": performance_diff,
         "Performance Plot": perf_plot_path,
     }

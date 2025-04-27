@@ -80,6 +80,9 @@ def generate_html_report(
             "Raw Data Evaluation": evaluation_summary["Raw Data Evaluation"],
             "Cleaned Data Evaluation": evaluation_summary["Cleaned Data Evaluation"],
             "Performance Plot": perf_plot_path,
+            "Performance_Difference": evaluation_summary.get(
+                "Performance Difference (%)", {}
+            ),
         },
         "policy_info": policy_info,
     }

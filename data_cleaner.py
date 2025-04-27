@@ -5,7 +5,7 @@ from event_logger import get_logger
 logger = get_logger("data_cleaner")
 
 
-def impute_missing_values(df, strategy="mean", threshold=0.5, ranked_features=None):
+def impute_missing_values(df, threshold=0.5, ranked_features=None):
 
     df = df.copy()
     total_rows = len(df)
@@ -52,7 +52,7 @@ def clean_duplicates(df):
     return df_clean, removed
 
 
-def clean_outliers(df, profiling_results, method="remove", ranked_features=None):
+def clean_outliers(df, profiling_results, method="cap", ranked_features=None):
     df = df.copy()
     columns = ranked_features if ranked_features else profiling_results.keys()
     outlier_cols_handled = []
@@ -114,9 +114,8 @@ def fix_inconsistencies(df, inconsistencies, ranked_features=None):
 def clean_data(
     df,
     profiling_report,
-    strategy="mean",
     missing_thresh=0.5,
-    outlier_method="remove",
+    outlier_method="cap",
     ranked_features=None,
 ):
     """
@@ -127,7 +126,7 @@ def clean_data(
 
     # Step-by-step cleaning
     df, missing_summary = impute_missing_values(
-        df, strategy=strategy, threshold=missing_thresh, ranked_features=ranked_features
+        df, threshold=missing_thresh, ranked_features=ranked_features
     )
     df, duplicates_removed = clean_duplicates(df)
     df, outlier_summary = clean_outliers(

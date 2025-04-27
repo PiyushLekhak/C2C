@@ -9,8 +9,7 @@ HISTORY_LOG_PATH = "logs/run_history.jsonl"
 
 # Default policy
 DEFAULT_POLICY = {
-    "imputation_strategy": "mean",
-    "outlier_method": "remove",
+    "outlier_method": "cap",
 }
 
 # Thresholds for adapting
@@ -64,18 +63,21 @@ def reflect_and_adapt():
     task_type = recent[0]["task"]
 
     if task_type == "regression":
-        avg_rmse = sum(r["rmse"] for r in recent) / len(recent)
+        avg_rmse = sum(r.get("rmse", 0) for r in recent) / len(recent)
         logger.info(f"📉 Recent avg RMSE (last 5): {avg_rmse:.2f}")
         if avg_rmse > THRESHOLDS["rmse"]:
             logger.info("🔁 RMSE too high — switching to median/cap.")
             return {"imputation_strategy": "median", "outlier_method": "cap"}
 
     elif task_type == "classification":
-        avg_f1 = sum(r["f1"] for r in recent) / len(recent)
-        logger.info(f"📈 Recent avg F1 Score (last 5): {avg_f1:.2f}")
-        if avg_f1 < THRESHOLDS["f1"]:
-            logger.info("🔁 F1 too low — switching to mode/cap.")
-            return {"imputation_strategy": "mode", "outlier_method": "cap"}
+        # Check if "f1" exists before computing avg_f1
+        f1_scores = [r.get("f1") for r in recent if "f1" in r]
+        if f1_scores:
+            avg_f1 = sum(f1_scores) / len(f1_scores)
+            logger.info(f"📈 Recent avg F1 Score (last 5): {avg_f1:.2f}")
+            if avg_f1 < THRESHOLDS["f1"]:
+                logger.info("🔁 F1 too low — switching to mode/cap.")
+                return {"imputation_strategy": "mode", "outlier_method": "cap"}
 
     return DEFAULT_POLICY
 

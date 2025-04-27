@@ -12,7 +12,7 @@ logger = get_logger("feature_ranker")
 def rank_features(
     X,
     y,
-    task_type="classification",
+    task_type="regression",
     save_dir="plots",
     plot_name="feature_importance.png",
 ):

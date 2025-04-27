@@ -11,7 +11,7 @@ from adaptive_controller import reflect_and_adapt, log_and_reflect_adaptation
 from report_generator import generate_html_report
 
 # === Configurations ===
-DATA_PATH = "datasets/sample_data.csv"  # <-- change this if needed
+DATA_PATH = "datasets/regression_with_nans.csv"  # <-- change this if needed
 TARGET_COLUMN = "target"  # <-- change depending on your dataset
 SAVE_DIR = "plots"
 USE_ADAPTIVE_POLICY = True  # Toggle: use default or adaptive
@@ -34,6 +34,14 @@ def main():
     print("✅ Data profiling completed.")
 
     # === 3. Feature Ranking (Before Cleaning) ===
+
+    # Handle missing values in target variable (y)
+    if y.isnull().any():
+        print("⚠️ Missing values found in target. Imputing or dropping missing values.")
+        y = y.dropna()  # Or impute (e.g., y = y.fillna(y.mean()) for regression)
+        X = X.loc[y.index]  # Align X with the modified y (after dropping)
+
+    # Rank features before cleaning
     ranked_before, importance_before_path = rank_features(
         X, y, save_dir=SAVE_DIR, plot_name="feature_importance_before.png"
     )
@@ -46,8 +54,7 @@ def main():
         policy = reflect_and_adapt()
     else:
         policy = {
-            "imputation_strategy": "mean",
-            "outlier_method": "remove",
+            "outlier_method": "cap",
         }
 
     # ✅ Modify cleaning aggressiveness based on dataset size
@@ -65,7 +72,6 @@ def main():
     X_clean, cleaning_summary = clean_data(
         X,
         profiling_summary,
-        strategy=policy["imputation_strategy"],
         outlier_method=policy["outlier_method"],
         ranked_features=ranked_before.index.tolist(),
     )
