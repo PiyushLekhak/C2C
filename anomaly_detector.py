@@ -99,11 +99,13 @@ def detect_anomalies_with_knn(
         f"🎯 Anomaly detection complete. {anomaly_flags.sum()} anomalies flagged."
     )
 
-    summary = {
+    anomaly_plot_full_path = os.path.join(save_path, "anomaly_score_distribution.png")
+
+    anomaly_summary = {
         "total_anomalies_flagged": int(anomaly_flags.sum()),
-        "post_action": action_taken,
-        "anomaly_plot_path": plot_path,
         "contamination_rate": contamination,
+        "post_action": post_action,
+        "anomaly_plot_path": os.path.relpath(anomaly_plot_full_path, start="reports"),
     }
 
-    return df_post, anomaly_report, summary
+    return df_post, anomaly_summary, anomaly_report

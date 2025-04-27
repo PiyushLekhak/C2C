@@ -28,7 +28,9 @@ def main():
     y = df[TARGET_COLUMN]
 
     # === 2. Profile Data ===
-    profiling_summary = profile_data(df, save_path=SAVE_DIR)
+    profiling_summary = profile_data(
+        df, save_path=SAVE_DIR, target_column=TARGET_COLUMN
+    )
     print("✅ Data profiling completed.")
 
     # === 3. Feature Ranking (Before Cleaning) ===

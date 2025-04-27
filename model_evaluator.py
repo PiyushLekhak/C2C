@@ -54,9 +54,6 @@ def evaluate_classification(y_true, y_pred):
         "Weighted F1 Score": f1_score(y_true, y_pred, average="weighted"),
         "Accuracy": accuracy_score(y_true, y_pred),
         "Confusion Matrix": confusion_matrix(y_true, y_pred).tolist(),
-        "Per-Class Metrics Report": classification_report(
-            y_true, y_pred, output_dict=True
-        ),
     }
     logger.info("Classification evaluation completed.")
     return metrics

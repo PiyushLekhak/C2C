@@ -35,8 +35,11 @@ def generate_html_report(
     policy_info,
     save_dir="reports",
     template_dir="templates",
-    plot_dir="plots",
 ):
+    import os
+    from jinja2 import Environment, FileSystemLoader
+    from datetime import datetime
+
     os.makedirs(save_dir, exist_ok=True)
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template("report_template.html")
@@ -44,7 +47,6 @@ def generate_html_report(
     report_filename = f"report_{timestamp}.html"
     report_path = os.path.join(save_dir, report_filename)
 
-    # Make relative paths
     feature_importance_before_path = os.path.relpath(
         feature_importance_before_path, start=save_dir
     )
@@ -55,19 +57,23 @@ def generate_html_report(
         evaluation_summary["Performance Plot"], start=save_dir
     )
 
-    # Get all categorized plots
-    categorized_plots = categorize_plots(plot_dir)
-    # Relativize all plots to report folder
-    for key in categorized_plots:
-        categorized_plots[key] = [
-            os.path.relpath(p, start=save_dir) for p in categorized_plots[key]
-        ]
+    anomaly_plot_path = anomaly_summary.get("anomaly_plot_path", None)
+
+    # Split cleaning_summary nicely
+    dropped_columns = cleaning_summary.get("missing_handling", {}).get(
+        "dropped_columns", []
+    )
+    imputed_columns = cleaning_summary.get("missing_handling", {}).get("imputed", {})
+    outlier_handling = cleaning_summary.get("outlier_handling", {})
 
     context = {
         "timestamp": timestamp,
         "profiling": profiling_summary,
-        "cleaning": cleaning_summary,
-        "anomaly": anomaly_summary,
+        "cleaning_summary": cleaning_summary,
+        "cleaning_dropped": dropped_columns,
+        "cleaning_imputed": imputed_columns,
+        "outlier_handling": outlier_handling,
+        "anomaly_summary": anomaly_summary,
         "feature_importance_before_path": feature_importance_before_path,
         "feature_importance_after_path": feature_importance_after_path,
         "evaluation": {
@@ -75,8 +81,7 @@ def generate_html_report(
             "Cleaned Data Evaluation": evaluation_summary["Cleaned Data Evaluation"],
             "Performance Plot": perf_plot_path,
         },
-        "policy": policy_info,
-        "plots": categorized_plots,
+        "policy_info": policy_info,
     }
 
     html = template.render(**context)

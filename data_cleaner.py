@@ -6,6 +6,7 @@ logger = get_logger("data_cleaner")
 
 
 def impute_missing_values(df, strategy="mean", threshold=0.5, ranked_features=None):
+
     df = df.copy()
     total_rows = len(df)
     cleaning_summary = {"dropped_columns": [], "imputed": {}}
@@ -22,14 +23,13 @@ def impute_missing_values(df, strategy="mean", threshold=0.5, ranked_features=No
     for col in columns:
         if col in df.columns and df[col].isnull().sum() > 0:
             if np.issubdtype(df[col].dtype, np.number):
-                if strategy == "mean":
+                skewness = df[col].skew()
+                if abs(skewness) > 1:
+                    df[col] = df[col].fillna(df[col].median())
+                    method = "median (due to high skew)"
+                else:
                     df[col] = df[col].fillna(df[col].mean())
                     method = "mean"
-                elif strategy == "median":
-                    df[col] = df[col].fillna(df[col].median())
-                    method = "median"
-                else:
-                    method = "unknown"
             else:
                 df[col] = df[col].fillna(df[col].mode()[0])
                 method = "mode"
