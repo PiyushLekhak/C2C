@@ -54,9 +54,10 @@ def rank_features(
     plot_path = os.path.join(save_dir, plot_name)
 
     plt.figure(figsize=(10, 6))
-    importances_sorted.plot(kind="bar")
+    importances_sorted.iloc[:7].plot(kind="bar")  # Show only top 7 features
     plt.title("Feature Importance Ranking")
     plt.ylabel("Importance Score")
+    plt.xticks(rotation=45, ha="right")  # Rotate x-axis labels for better readability
     plt.tight_layout()
     plt.savefig(plot_path)
     plt.close()

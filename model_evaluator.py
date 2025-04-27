@@ -69,24 +69,44 @@ def evaluate_regression(y_true, y_pred):
 
 
 def minimally_clean_raw_data(X, y):
-    X_copy = X.copy()
-    y_copy = y.copy()
+    """
+    Prepares X and y for modeling by
+      1) dropping any rows where y is NaN,
+      2) dropping rows for features with low missingness,
+      3) imputing features with high missingness,
+      4) finally dropping any remaining rows with NaNs.
 
-    missing_ratios = X_copy.isnull().mean()
+    Returns:
+        X_clean (pd.DataFrame): No-NaN feature matrix
+        y_clean (pd.Series): No-NaN target vector, aligned
+    """
+    # 1) Drop any rows where the target itself is missing
+    mask_y = y.notnull()
+    X_clean = X.loc[mask_y].copy()
+    y_clean = y.loc[mask_y].copy()
 
+    # 2) Identify features to drop rows on vs. impute
+    missing_ratios = X_clean.isnull().mean()
     cols_to_impute = missing_ratios[missing_ratios > MISSING_THRESHOLD].index.tolist()
     cols_to_dropna = missing_ratios[missing_ratios <= MISSING_THRESHOLD].index.tolist()
 
+    # 3) Drop rows where any of the low-missingness cols are NaN
     if cols_to_dropna:
-        mask = X_copy[cols_to_dropna].notnull().all(axis=1)
-        X_copy = X_copy[mask]
-        y_copy = y_copy[mask]
+        mask_rows = X_clean[cols_to_dropna].notnull().all(axis=1)
+        X_clean = X_clean.loc[mask_rows]
+        y_clean = y_clean.loc[mask_rows]
 
+    # 4) Impute the high-missingness columns
     if cols_to_impute:
         imputer = SimpleImputer(strategy="mean")
-        X_copy[cols_to_impute] = imputer.fit_transform(X_copy[cols_to_impute])
+        X_clean[cols_to_impute] = imputer.fit_transform(X_clean[cols_to_impute])
 
-    return X_copy, y_copy
+    # 5) Final sweep: drop any row that still has a NaN (should be none)
+    final_mask = X_clean.notnull().all(axis=1)
+    X_clean = X_clean.loc[final_mask]
+    y_clean = y_clean.loc[final_mask]
+
+    return X_clean, y_clean
 
 
 def plot_evaluation_comparison(
