@@ -36,9 +36,6 @@ def generate_html_report(
     save_dir="reports",
     template_dir="templates",
 ):
-    import os
-    from jinja2 import Environment, FileSystemLoader
-    from datetime import datetime
 
     os.makedirs(save_dir, exist_ok=True)
     env = Environment(loader=FileSystemLoader(template_dir))

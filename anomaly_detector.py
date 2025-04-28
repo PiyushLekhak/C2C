@@ -13,7 +13,7 @@ logger = get_logger("anomaly_detector")
 def detect_anomalies_with_knn(
     df,
     k=5,
-    scale_method=None,
+    scale_method="standard",
     contamination=0.05,
     post_action="none",
     cap_quantiles=(0.01, 0.99),

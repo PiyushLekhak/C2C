@@ -298,7 +298,14 @@
     {% if policy_info %}
       <table>
         <tr><th>Policy</th><th>Method</th></tr>
-        <tr><td><strong>Outlier Method</strong></td><td>{{ policy_info.outlier_method }}</td></tr>
+        <tr>
+          <td><strong>Outlier Method</strong></td>
+          <td>{{ policy_info.outlier_method }}</td>
+        </tr>
+        <tr>
+          <td><strong>Scale Method</strong></td>
+          <td>{{ policy_info.scale_method }}</td>
+        </tr>
       </table>
     {% else %}
       <p>No policy information recorded.</p>

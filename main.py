@@ -11,8 +11,8 @@ from adaptive_controller import reflect_and_adapt, log_and_reflect_adaptation
 from report_generator import generate_html_report
 
 # === Configurations ===
-DATA_PATH = "datasets/adult_data.xlsx"  # <-- change this if needed
-TARGET_COLUMN = "income"  # <-- change depending on your dataset
+DATA_PATH = "datasets/adult_data.xlsx"  # <-- change dataset
+TARGET_COLUMN = "income"  # <-- change depending on dataset
 SAVE_DIR = "plots"
 USE_ADAPTIVE_POLICY = True  # Toggle: use default or adaptive
 
@@ -55,7 +55,7 @@ def main():
     if USE_ADAPTIVE_POLICY:
         policy = reflect_and_adapt()
     else:
-        policy = {"outlier_method": "cap"}
+        policy = {"outlier_method": "remove", "scale_method": "standard"}
 
     # Modify cleaning based on dataset size
     if dataset_size < 100:
@@ -79,7 +79,10 @@ def main():
     # === 5. Anomaly Detection ===
     if anomaly_detection_enabled:
         X_clean_post_anomaly, anomaly_summary, _ = detect_anomalies_with_knn(
-            X_clean, post_action=policy["outlier_method"], save_path=SAVE_DIR
+            X_clean,
+            scale_method=policy.get("scale_method", "standard"),
+            post_action=policy["outlier_method"],
+            save_path=SAVE_DIR,
         )
         print("✅ Anomaly detection completed.")
     else:

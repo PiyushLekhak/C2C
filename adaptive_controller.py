@@ -7,12 +7,12 @@ logger = get_logger("adaptive_controller")
 
 HISTORY_LOG_PATH = "logs/run_history.jsonl"
 
-# Default policy
+# We only adapt outlier handling; imputation is self-managed by the cleaner
 DEFAULT_POLICY = {
-    "outlier_method": "cap",
+    "outlier_method": "remove",
+    "scale_method": "standard",
 }
 
-# Thresholds for adapting
 THRESHOLDS = {
     "rmse": 100,
     "f1": 0.6,
@@ -27,64 +27,54 @@ def load_all_runs():
 
 
 def compute_summary_metrics(run_data):
-    """
-    Extract and return RMSE or Weighted F1 Score depending on task type.
-    """
     metrics = run_data.get("evaluation", {})
     if "RMSE" in metrics:
         return {"task": "regression", "rmse": metrics["RMSE"]}
-    elif "Weighted F1 Score" in metrics:
+    if "Weighted F1 Score" in metrics:
         return {"task": "classification", "f1": metrics["Weighted F1 Score"]}
     return None
 
 
 def reflect_and_adapt():
-    """
-    Reflects on the last 5 runs and adjusts cleaning policy if needed.
-    Returns the policy to use for the next run.
-    """
     runs = load_all_runs()
     if len(runs) < 3:
         logger.info("📌 Not enough history to reflect. Using default policy.")
         return DEFAULT_POLICY
 
-    # Extract valid summary metrics
-    summaries = []
-    for run in runs:
-        summary = compute_summary_metrics(run)
-        if summary:
-            summaries.append(summary)
-
+    # Compute summaries for each run
+    summaries = [compute_summary_metrics(r) for r in runs]
+    # Drop any runs where compute_summary_metrics returned None
+    summaries = [s for s in summaries if s]
     if not summaries:
-        logger.warning("⚠️ No usable evaluation metrics found in run history.")
+        logger.warning("⚠️ No usable evaluation metrics found. Using default policy.")
         return DEFAULT_POLICY
 
-    recent = summaries[-5:]  # Only last 5 runs
-    task_type = recent[0]["task"]
+    recent = summaries[-5:]
+    task = recent[0]["task"]
 
-    if task_type == "regression":
-        avg_rmse = sum(r.get("rmse", 0) for r in recent) / len(recent)
-        logger.info(f"📉 Recent avg RMSE (last 5): {avg_rmse:.2f}")
-        if avg_rmse > THRESHOLDS["rmse"]:
-            logger.info("🔁 RMSE too high — switching to median/cap.")
-            return {"imputation_strategy": "median", "outlier_method": "cap"}
-
-    elif task_type == "classification":
-        # Check if "f1" exists before computing avg_f1
-        f1_scores = [r.get("f1") for r in recent if "f1" in r]
-        if f1_scores:
-            avg_f1 = sum(f1_scores) / len(f1_scores)
-            logger.info(f"📈 Recent avg F1 Score (last 5): {avg_f1:.2f}")
+    if task == "regression":
+        # Keep only those with a real 'rmse' value
+        reg = [r for r in recent if "rmse" in r]
+        if reg:
+            avg_rmse = sum(r["rmse"] for r in reg) / len(reg)
+            logger.info(f"📉 Recent avg RMSE (last {len(reg)}): {avg_rmse:.2f}")
+            if avg_rmse > THRESHOLDS["rmse"]:
+                logger.info("🔁 RMSE too high — switching to median/cap.")
+                return {"imputation_strategy": "median", "outlier_method": "cap"}
+    else:  # classification
+        # Keep only those with a real 'f1' value
+        cls = [r for r in recent if "f1" in r]
+        if cls:
+            avg_f1 = sum(r["f1"] for r in cls) / len(cls)
+            logger.info(f"📈 Recent avg F1 (last {len(cls)}): {avg_f1:.2f}")
             if avg_f1 < THRESHOLDS["f1"]:
                 logger.info("🔁 F1 too low — switching to mode/cap.")
                 return {"imputation_strategy": "mode", "outlier_method": "cap"}
 
+    # Fallback
     return DEFAULT_POLICY
 
 
 def log_and_reflect_adaptation(evaluation, policy, decision, extra_info=None):
-    """
-    Logs current run, reflects on recent history, and returns the next policy.
-    """
     log_run_summary(evaluation, policy, decision, extra_info)
     return reflect_and_adapt()
