@@ -15,17 +15,9 @@
       color: #d4d4d4;
     }
 
-    h1 {
-      color: #56d6ad; /* Light blue */
-    }
-
-    h2 {
-      color: #f39c12; /* Golden yellow */
-    }
-
-    h3 {
-      color: #e74c3c; /* Red */
-    }
+    h1 { color: #56d6ad; }
+    h2 { color: #f39c12; margin-bottom: 10px; }
+    h3 { color: #e74c3c; margin-top: 20px; }
 
     .section {
       margin-bottom: 50px;
@@ -34,8 +26,9 @@
     .flex-row {
       display: flex;
       justify-content: space-between;
-      align-items: stretch;
-      gap: 20px;
+      gap: 10px;
+      margin-top: 20px;
+      margin-bottom: 20px;
     }
 
     .flex-col {
@@ -47,265 +40,240 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
-      margin-bottom: 20px;
-    }
-
-    table, th, td {
-      border: 1px solid #444;
+      margin: 10px 0;
     }
 
     th, td {
+      border: 1px solid #444;
       padding: 8px 12px;
       text-align: left;
     }
 
     th {
-      background-color: #333; /* Darker gray for table headers */
-    }
-
-    .section img:only-child {
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
+      background-color: #333;
     }
 
     img {
       max-width: 100%;
-      height: auto;
-      margin: 10px auto;
       border: 1px solid #444;
       border-radius: 6px;
+      background-color: #2a2a2a;
+      margin: 10px auto;
       display: block;
-      background-color: #2a2a2a; /* slight contrast for image area */
+    }
+
+    .image-container {
+      flex: 1;
+      padding: 0 5px;
+    }
+
+    .image-container h3 {
+      text-align: center;
+      margin-bottom: 5px;
     }
 
     pre {
       background-color: #2d2d2d;
       padding: 10px;
       border-radius: 8px;
-      overflow-x: auto;
       white-space: pre-wrap;
       word-wrap: break-word;
-    }
-
-    /* Specific header colors for each section */
-    .data-profiling-header {
-      color: #3498db; /* Blue */
-    }
-
-    .data-cleaning-header {
-      color: #2ecc71; /* Green */
-    }
-
-    .anomaly-detection-header {
-      color: #e67e22; /* Orange */
-    }
-
-    .feature-importance-header {
-      color: #9b59b6; /* Purple */
-    }
-
-    .model-evaluation-header {
-      color: #16a085; /* Teal */
-    }
-
-    .policy-info-header {
-      color: #f39c12; /* Golden yellow */
     }
   </style>
 </head>
 
 <body>
   <h1>📊 Full Pipeline Report</h1>
-  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
-    <div>
-      <p><strong>Run Timestamp:</strong> {{ timestamp }}</p>
-    </div>
-    <div style="border: 1px solid #444; padding: 10px; border-radius: 8px;">
-      <strong>Performance Improvement:</strong>
-      {% if evaluation.Performance_Difference %}
-        {% for metric, diff in evaluation.Performance_Difference.items() %}
-          <div>{{ metric }}: {{ diff }}%</div>
-        {% endfor %}
-      {% else %}
-        <div>N/A</div>
-      {% endif %}
-    </div>
+  <p><strong>Generated at:</strong> {{ timestamp }}</p>
+
+  <!-- Section 0: Summary Snapshot -->
+  <div class="section">
+    <h2>📌 Summary Snapshot</h2>
+    <ul>
+      <li><strong>Missing Value % Reduced:</strong> {{ (cleaning_eval.missing_pct_relative_reduction * 100) | round(2) }}%</li>
+      <li><strong>Duplicates Removed:</strong> {{ cleaning_eval.duplicates_removed }}</li>
+      <li><strong>Total Outliers Before:</strong> {{ cleaning_eval.outliers_before }}</li>
+      <li><strong>Total Outliers After:</strong> {{ cleaning_eval.outliers_after }}</li>
+      <li><strong>Final Dataset Shape:</strong> {{ cleaning_eval.final_shape }}</li>
+      <li><strong>Policy Used:</strong> {{ policy_info.imputation_strategy }}, {{ policy_info.outlier_method }}, {{ policy_info.scale_method }}</li>
+    </ul>
   </div>
 
+  <!-- Section 1: Data Profiling Before Cleaning -->
   <div class="section">
-    <h2 class="data-profiling-header">1. Data Profiling</h2>
+    <h2>1. Data Profiling (Before Cleaning)</h2>
     <table>
-      <tr><th>Missing Values</th><td>{{ profiling.missing_values }}</td></tr>
-      <tr><th>Duplicate Rows</th><td>{{ profiling.duplicate_rows }}</td></tr>
-      <tr><th>Outliers</th><td>{{ profiling.outliers }}</td></tr>
-      <tr><th>Inconsistencies</th><td>{{ profiling.inconsistencies }}</td></tr>
+      <tr><th>Missing Values</th><td>{{ profiling_before.missing_values }}</td></tr>
+      <tr><th>Duplicate Rows</th><td>{{ profiling_before.duplicate_rows }}</td></tr>
+      <tr><th>Outliers</th><td>{{ profiling_before.outliers }}</td></tr>
+      <tr><th>Inconsistencies</th><td>{{ profiling_before.inconsistencies }}</td></tr>
     </table>
+  </div>
+
+  <!-- Section 2: Data Profiling After Cleaning -->
+  <div class="section">
+    <h2>2. Data Profiling (After Cleaning)</h2>
 
     <div class="flex-row">
-      {% if profiling.target_distribution_path %}
-        <div class="flex-col">
-          <h3>Target Distribution</h3>
-          <img src="{{ profiling.target_distribution_path }}" alt="Target Distribution">
-        </div>
+      {% if profiling_after.target_distribution_path %}
+      <div class="image-container">
+        <h3>Target Distribution</h3>
+        <img src="{{ profiling_after.target_distribution_path }}" alt="Target Distribution After Cleaning" />
+      </div>
       {% endif %}
-      <div class="flex-col">
+    
+      <div class="image-container">
         <h3>Correlation Heatmap</h3>
-        <img src="{{ profiling.correlation_heatmap_path }}" alt="Correlation Heatmap">
+        <img src="{{ profiling_after.correlation_heatmap_path }}" alt="Correlation Heatmap After Cleaning" />
       </div>
     </div>
 
-    <h3>Top 5 Correlated Feature Pairs</h3>
+    <h3>Top Correlations</h3>
+    {% if profiling_after.top_correlations %}
+      <table>
+        <tr>
+          <th>Feature 1</th>
+          <th>Feature 2</th>
+          <th>Correlation</th>
+        </tr>
+        {% for row in profiling_after.top_correlations %}
+        <tr>
+          <td>{{ row["Feature 1"] }}</td>
+          <td>{{ row["Feature 2"] }}</td>
+          <td>{{ row["Correlation"] }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No strong correlations found.</p>
+    {% endif %}
+
+    <h3>Summary Stats</h3>
     <table>
-      <tr><th>Feature 1</th><th>Feature 2</th><th>Correlation</th></tr>
-      {% for pair in profiling.top_correlations %}
-      <tr>
-        <td>{{ pair['Feature 1'] }}</td>
-        <td>{{ pair['Feature 2'] }}</td>
-        <td>{{ pair['Correlation'] | round(2) }}</td>
-      </tr>
-      {% endfor %}
+      <tr><th>Missing Values</th><td>{{ profiling_after.missing_values }}</td></tr>
+      <tr><th>Duplicate Rows</th><td>{{ profiling_after.duplicate_rows }}</td></tr>
+      <tr><th>Outliers</th><td>{{ profiling_after.outliers }}</td></tr>
+      <tr><th>Inconsistencies</th><td>{{ profiling_after.inconsistencies }}</td></tr>
     </table>
   </div>
 
+  <!-- Section 3: Data Cleaning Summary -->
   <div class="section">
-    <h2 class="data-cleaning-header">2. Data Cleaning Summary</h2>
+    <h2>3. Data Cleaning Summary</h2>
 
     <h3>Missing Data Handling</h3>
     <table>
       <tr><th>Dropped Columns</th>
-          <td>
-            {% if cleaning_dropped %}
-              {{ cleaning_dropped | join(', ') }}
-            {% else %}
-              None
-            {% endif %}
-          </td>
+        <td>
+          {% if cleaning_dropped %}
+            {{ cleaning_dropped | join(', ') }}
+          {% else %}
+            None
+          {% endif %}
+        </td>
       </tr>
       <tr><th>Imputed Columns</th>
-          <td>
-            {% if cleaning_imputed %}
-              <ul style="list-style: none; padding-left: 0;">
-                {% for col, method in cleaning_imputed.items() %}
-                  <li>{{ col }}: {{ method }}</li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              None
-            {% endif %}
-          </td>
+        <td>
+          {% if cleaning_imputed %}
+            <ul style="list-style: none; padding-left: 0;">
+              {% for col, method in cleaning_imputed.items() %}
+                <li>{{ col }}: {{ method }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            None
+          {% endif %}
+        </td>
       </tr>
     </table>
 
     <h3>Outlier Handling</h3>
     <table>
-      <tr><th>Method Used</th>
-          <td>{{ outlier_handling.outlier_method }}</td>
-      </tr>
+      <tr><th>Method Used</th><td>{{ outlier_handling.outlier_method }}</td></tr>
       <tr><th>Columns Affected</th>
-          <td>
-            {% if outlier_handling.columns %}
-              {{ outlier_handling.columns | join(', ') }}
-            {% else %}
-              None
-            {% endif %}
-          </td>
+        <td>
+          {% if outlier_handling.columns %}
+            {{ outlier_handling.columns | join(', ') }}
+          {% else %}
+            None
+          {% endif %}
+        </td>
       </tr>
     </table>
   </div>
 
-
+  <!-- Section 4: Cleaning Evaluation -->
   <div class="section">
-    <h2 class="anomaly-detection-header">3. Anomaly Detection</h2>
+    <h2>4. Cleaning Evaluation Metrics</h2>
+    <h3>Missing & Shape</h3>
+    <table>
+      <tr><td>Missing % Before</td><td>{{ cleaning_eval.missing_pct_before }}</td></tr>
+      <tr><td>Missing % After</td><td>{{ cleaning_eval.missing_pct_after }}</td></tr>
+      <tr><td>Final Dataset Shape</td><td>{{ cleaning_eval.final_shape }}</td></tr>
+    </table>
+
+    <h3>Skewness Summary</h3>
+    <table>
+      <tr><td>Mean Skew (Before)</td><td>{{ cleaning_eval.skew_mean_before }}</td></tr>
+      <tr><td>Mean Skew (After)</td><td>{{ cleaning_eval.skew_mean_after }}</td></tr>
+      <tr><td>Max Skew (Before)</td><td>{{ cleaning_eval.skew_max_before }}</td></tr>
+      <tr><td>Max Skew (After)</td><td>{{ cleaning_eval.skew_max_after }}</td></tr>
+    </table>
+
+    <h3>Outlier Counts</h3>
+    <table>
+      <tr><td>Total Outliers Before</td><td>{{ cleaning_eval.outliers_before }}</td></tr>
+      <tr><td>Total Outliers After</td><td>{{ cleaning_eval.outliers_after }}</td></tr>
+    </table>
+  </div>
+
+  <!-- Section 5: Anomaly Detection -->
+  <div class="section">
+    <h2>5. Anomaly Detection</h2>
     {% if anomaly_summary.total_anomalies_flagged > 0 %}
       <p><strong>Total Anomalies Flagged:</strong> {{ anomaly_summary.total_anomalies_flagged }}</p>
       <p><strong>Contamination Rate:</strong> {{ (anomaly_summary.contamination_rate * 100) | round(2) }}%</p>
-      <p><strong>Post-Action:</strong> {{ anomaly_summary.post_action }}</p>
-      {% if anomaly_summary.anomaly_plot_path %}
-        <img src="{{ anomaly_summary.anomaly_plot_path }}" alt="Anomaly Score Distribution">
+      {% if anomaly_plot_path %}
+        <img src="{{ anomaly_plot_path }}" alt="Anomaly Plot">
       {% endif %}
     {% else %}
-      <p>No anomalies detected or anomaly detection skipped.</p>
+      <p>No anomalies detected or anomaly detection was skipped.</p>
     {% endif %}
+    {% if anomaly_report %}
+    <h3>Top 10 Anomalous Records</h3>
+    <table>
+      <tr>
+        {% for col in anomaly_report[0].keys() %}
+          <th>{{ col }}</th>
+        {% endfor %}
+      </tr>
+      {% for row in anomaly_report %}
+      <tr {% if row.is_anomaly %} style="color: #fd9589;" {% endif %}>
+        {% for col in row.values() %}
+          <td>{{ col }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+
   </div>
 
+  <!-- Section 6: Feature Importance -->
   <div class="section">
-    <h2 class="feature-importance-header">4. Feature Importance</h2>
-    <div class="flex-row">
-      <div class="flex-col">
-        <h3>Before Cleaning</h3>
-        <img src="{{ feature_importance_before_path }}" alt="Feature Importance Before">
-      </div>
-      <div class="flex-col">
-        <h3>After Cleaning</h3>
-        <img src="{{ feature_importance_after_path }}" alt="Feature Importance After">
-      </div>
-    </div>
+    <h2>6. Feature Importance</h2>
+    <img src="{{ feature_importance_path }}" alt="Feature Importance Plot">
   </div>
 
+  <!-- Section 7: Policy Info -->
   <div class="section">
-    <h2 class="model-evaluation-header">5. Model Evaluation</h2>
-
-    <div class="flex-row">
-      {# Raw data metrics #}
-      <div class="flex-col">
-        <h3>Before Cleaning</h3>
-        <table>
-          {% set raw = evaluation['Raw Data Evaluation'] %}
-          {% for metric, value in raw.items() %}
-            <tr>
-              <td>{{ metric }}</td>
-              <td>
-                {% if metric in ['Weighted F1 Score','Accuracy'] %}
-                  {{ (value * 100) | round(2) }}%
-                {% else %}
-                  {{ value | round(3) }}
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </table>
-      </div>
-
-      {# Cleaned data metrics #}
-      <div class="flex-col">
-        <h3>After Cleaning</h3>
-        <table>
-          {% set clean = evaluation['Cleaned Data Evaluation'] %}
-          {% for metric, value in clean.items() %}
-            <tr>
-              <td>{{ metric }}</td>
-              <td>
-                {% if metric in ['Weighted F1 Score','Accuracy'] %}
-                  {{ (value * 100) | round(2) }}%
-                {% else %}
-                  {{ value | round(3) }}
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </table>
-      </div>
-    </div>
-
-    <h3>Performance Comparison</h3>
-    <img src="{{ evaluation['Performance Plot'] }}" alt="Performance Comparison">
-  </div>
-
-  <div class="section">
-    <h2 class="policy-info-header">6. Policy & Adaptation Info</h2>
+    <h2>7. Policy & Adaptation Info</h2>
     {% if policy_info %}
       <table>
         <tr><th>Policy</th><th>Method</th></tr>
-        <tr>
-          <td><strong>Outlier Method</strong></td>
-          <td>{{ policy_info.outlier_method }}</td>
-        </tr>
-        <tr>
-          <td><strong>Scale Method</strong></td>
-          <td>{{ policy_info.scale_method }}</td>
-        </tr>
+        <tr><td>Imputation Strategy</td><td>{{ policy_info.imputation_strategy }}</td></tr>
+        <tr><td>Outlier Method</td><td>{{ policy_info.outlier_method }}</td></tr>
+        <tr><td>Scale Method</td><td>{{ policy_info.scale_method }}</td></tr>
       </table>
     {% else %}
       <p>No policy information recorded.</p>

@@ -1,0 +1,1466 @@
+report_template.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pipeline Report - {{ timestamp }}</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+    }
+
+    h1, h2, h3 {
+      color: #d4d4d4;
+    }
+
+    h1 {
+      color: #56d6ad; /* Light blue */
+    }
+
+    h2 {
+      color: #f39c12; /* Golden yellow */
+    }
+
+    h3 {
+      color: #e74c3c; /* Red */
+    }
+
+    .section {
+      margin-bottom: 50px;
+    }
+
+    .flex-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: stretch;
+      gap: 20px;
+    }
+
+    .flex-col {
+      flex: 1;
+      padding: 0 5px;
+      text-align: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+
+    table, th, td {
+      border: 1px solid #444;
+    }
+
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #333; /* Darker gray for table headers */
+    }
+
+    .section img:only-child {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      margin: 10px auto;
+      border: 1px solid #444;
+      border-radius: 6px;
+      display: block;
+      background-color: #2a2a2a; /* slight contrast for image area */
+    }
+
+    pre {
+      background-color: #2d2d2d;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    /* Specific header colors for each section */
+    .data-profiling-header {
+      color: #3498db; /* Blue */
+    }
+
+    .data-cleaning-header {
+      color: #2ecc71; /* Green */
+    }
+
+    .anomaly-detection-header {
+      color: #e67e22; /* Orange */
+    }
+
+    .feature-importance-header {
+      color: #9b59b6; /* Purple */
+    }
+
+    .model-evaluation-header {
+      color: #16a085; /* Teal */
+    }
+
+    .policy-info-header {
+      color: #f39c12; /* Golden yellow */
+    }
+  </style>
+</head>
+
+<body>
+  <h1>📊 Full Pipeline Report</h1>
+  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+    <div>
+      <p><strong>Run Timestamp:</strong> {{ timestamp }}</p>
+    </div>
+    <div style="border: 1px solid #444; padding: 10px; border-radius: 8px;">
+      <strong>Performance Improvement:</strong>
+      {% if evaluation.Performance_Difference %}
+        {% for metric, diff in evaluation.Performance_Difference.items() %}
+          <div>{{ metric }}: {{ diff }}%</div>
+        {% endfor %}
+      {% else %}
+        <div>N/A</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 class="data-profiling-header">1. Data Profiling</h2>
+    <table>
+      <tr><th>Missing Values</th><td>{{ profiling.missing_values }}</td></tr>
+      <tr><th>Duplicate Rows</th><td>{{ profiling.duplicate_rows }}</td></tr>
+      <tr><th>Outliers</th><td>{{ profiling.outliers }}</td></tr>
+      <tr><th>Inconsistencies</th><td>{{ profiling.inconsistencies }}</td></tr>
+    </table>
+
+    <div class="flex-row">
+      {% if profiling.target_distribution_path %}
+        <div class="flex-col">
+          <h3>Target Distribution</h3>
+          <img src="{{ profiling.target_distribution_path }}" alt="Target Distribution">
+        </div>
+      {% endif %}
+      <div class="flex-col">
+        <h3>Correlation Heatmap</h3>
+        <img src="{{ profiling.correlation_heatmap_path }}" alt="Correlation Heatmap">
+      </div>
+    </div>
+
+    <h3>Top 5 Correlated Feature Pairs</h3>
+    <table>
+      <tr><th>Feature 1</th><th>Feature 2</th><th>Correlation</th></tr>
+      {% for pair in profiling.top_correlations %}
+      <tr>
+        <td>{{ pair['Feature 1'] }}</td>
+        <td>{{ pair['Feature 2'] }}</td>
+        <td>{{ pair['Correlation'] | round(2) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="section">
+    <h2 class="data-cleaning-header">2. Data Cleaning Summary</h2>
+
+    <h3>Missing Data Handling</h3>
+    <table>
+      <tr><th>Dropped Columns</th>
+          <td>
+            {% if cleaning_dropped %}
+              {{ cleaning_dropped | join(', ') }}
+            {% else %}
+              None
+            {% endif %}
+          </td>
+      </tr>
+      <tr><th>Imputed Columns</th>
+          <td>
+            {% if cleaning_imputed %}
+              <ul style="list-style: none; padding-left: 0;">
+                {% for col, method in cleaning_imputed.items() %}
+                  <li>{{ col }}: {{ method }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              None
+            {% endif %}
+          </td>
+      </tr>
+    </table>
+
+    <h3>Outlier Handling</h3>
+    <table>
+      <tr><th>Method Used</th>
+          <td>{{ outlier_handling.outlier_method }}</td>
+      </tr>
+      <tr><th>Columns Affected</th>
+          <td>
+            {% if outlier_handling.columns %}
+              {{ outlier_handling.columns | join(', ') }}
+            {% else %}
+              None
+            {% endif %}
+          </td>
+      </tr>
+    </table>
+  </div>
+
+
+  <div class="section">
+    <h2 class="anomaly-detection-header">3. Anomaly Detection</h2>
+    {% if anomaly_summary.total_anomalies_flagged > 0 %}
+      <p><strong>Total Anomalies Flagged:</strong> {{ anomaly_summary.total_anomalies_flagged }}</p>
+      <p><strong>Contamination Rate:</strong> {{ (anomaly_summary.contamination_rate * 100) | round(2) }}%</p>
+      <p><strong>Post-Action:</strong> {{ anomaly_summary.post_action }}</p>
+      {% if anomaly_summary.anomaly_plot_path %}
+        <img src="{{ anomaly_summary.anomaly_plot_path }}" alt="Anomaly Score Distribution">
+      {% endif %}
+    {% else %}
+      <p>No anomalies detected or anomaly detection skipped.</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h2 class="feature-importance-header">4. Feature Importance</h2>
+    <div class="flex-row">
+      <div class="flex-col">
+        <h3>Before Cleaning</h3>
+        <img src="{{ feature_importance_before_path }}" alt="Feature Importance Before">
+      </div>
+      <div class="flex-col">
+        <h3>After Cleaning</h3>
+        <img src="{{ feature_importance_after_path }}" alt="Feature Importance After">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 class="model-evaluation-header">5. Model Evaluation</h2>
+
+    <div class="flex-row">
+      {# Raw data metrics #}
+      <div class="flex-col">
+        <h3>Before Cleaning</h3>
+        <table>
+          {% set raw = evaluation['Raw Data Evaluation'] %}
+          {% for metric, value in raw.items() %}
+            <tr>
+              <td>{{ metric }}</td>
+              <td>
+                {% if metric in ['Weighted F1 Score','Accuracy'] %}
+                  {{ (value * 100) | round(2) }}%
+                {% else %}
+                  {{ value | round(3) }}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+
+      {# Cleaned data metrics #}
+      <div class="flex-col">
+        <h3>After Cleaning</h3>
+        <table>
+          {% set clean = evaluation['Cleaned Data Evaluation'] %}
+          {% for metric, value in clean.items() %}
+            <tr>
+              <td>{{ metric }}</td>
+              <td>
+                {% if metric in ['Weighted F1 Score','Accuracy'] %}
+                  {{ (value * 100) | round(2) }}%
+                {% else %}
+                  {{ value | round(3) }}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+
+    <h3>Performance Comparison</h3>
+    <img src="{{ evaluation['Performance Plot'] }}" alt="Performance Comparison">
+  </div>
+
+  <div class="section">
+    <h2 class="policy-info-header">6. Policy & Adaptation Info</h2>
+    {% if policy_info %}
+      <table>
+        <tr><th>Policy</th><th>Method</th></tr>
+        <tr>
+          <td><strong>Outlier Method</strong></td>
+          <td>{{ policy_info.outlier_method }}</td>
+        </tr>
+        <tr>
+          <td><strong>Scale Method</strong></td>
+          <td>{{ policy_info.scale_method }}</td>
+        </tr>
+      </table>
+    {% else %}
+      <p>No policy information recorded.</p>
+    {% endif %}
+  </div>
+
+</body>
+</html>
+
+adaptive_controller.py
+import json
+import os
+from run_history_logger import log_run_summary
+from event_logger import get_logger
+
+logger = get_logger("adaptive_controller")
+
+HISTORY_LOG_PATH = "logs/run_history.jsonl"
+
+# We only adapt outlier handling; imputation is self-managed by the cleaner
+DEFAULT_POLICY = {
+    "outlier_method": "remove",
+    "scale_method": "standard",
+}
+
+THRESHOLDS = {
+    "rmse": 100,
+    "f1": 0.6,
+}
+
+
+def load_all_runs():
+    if not os.path.exists(HISTORY_LOG_PATH):
+        return []
+    with open(HISTORY_LOG_PATH, "r") as f:
+        return [json.loads(line) for line in f]
+
+
+def compute_summary_metrics(run_data):
+    metrics = run_data.get("evaluation", {})
+    if "RMSE" in metrics:
+        return {"task": "regression", "rmse": metrics["RMSE"]}
+    if "Weighted F1 Score" in metrics:
+        return {"task": "classification", "f1": metrics["Weighted F1 Score"]}
+    return None
+
+
+def reflect_and_adapt():
+    runs = load_all_runs()
+    if len(runs) < 3:
+        logger.info("📌 Not enough history to reflect. Using default policy.")
+        return DEFAULT_POLICY
+
+    # Compute summaries for each run
+    summaries = [compute_summary_metrics(r) for r in runs]
+    # Drop any runs where compute_summary_metrics returned None
+    summaries = [s for s in summaries if s]
+    if not summaries:
+        logger.warning("⚠️ No usable evaluation metrics found. Using default policy.")
+        return DEFAULT_POLICY
+
+    recent = summaries[-5:]
+    task = recent[0]["task"]
+
+    if task == "regression":
+        # Keep only those with a real 'rmse' value
+        reg = [r for r in recent if "rmse" in r]
+        if reg:
+            avg_rmse = sum(r["rmse"] for r in reg) / len(reg)
+            logger.info(f"📉 Recent avg RMSE (last {len(reg)}): {avg_rmse:.2f}")
+            if avg_rmse > THRESHOLDS["rmse"]:
+                logger.info("🔁 RMSE too high — switching to median/cap.")
+                return {"imputation_strategy": "median", "outlier_method": "cap"}
+    else:  # classification
+        # Keep only those with a real 'f1' value
+        cls = [r for r in recent if "f1" in r]
+        if cls:
+            avg_f1 = sum(r["f1"] for r in cls) / len(cls)
+            logger.info(f"📈 Recent avg F1 (last {len(cls)}): {avg_f1:.2f}")
+            if avg_f1 < THRESHOLDS["f1"]:
+                logger.info("🔁 F1 too low — switching to mode/cap.")
+                return {"imputation_strategy": "mode", "outlier_method": "cap"}
+
+    # Fallback
+    return DEFAULT_POLICY
+
+
+def log_and_reflect_adaptation(evaluation, policy, decision, extra_info=None):
+    log_run_summary(evaluation, policy, decision, extra_info)
+    return reflect_and_adapt()
+
+
+anomaly_detector.py
+import numpy as np
+import pandas as pd
+import os
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from event_logger import get_logger
+
+logger = get_logger("anomaly_detector")
+
+
+def detect_anomalies_with_knn(
+    df,
+    k=5,
+    scale_method="standard",
+    contamination=0.05,
+    post_action="none",
+    cap_quantiles=(0.01, 0.99),
+    save_path="plots",
+):
+    """
+    Detects anomalies using KNN-based distance method.
+    Now includes score plot saving + summary info for report.
+
+    Returns:
+        df_post (pd.DataFrame): Cleaned or modified dataset.
+        anomaly_report (pd.DataFrame): Scores + is_anomaly flags.
+        summary (dict): Summary info for reporting.
+    """
+    logger.info("🔍 Starting KNN-based anomaly detection...")
+
+    df_numeric = df.select_dtypes(include=[np.number]).copy()
+    df_scaled = df_numeric.copy()
+
+    if scale_method == "standard":
+        scaler = StandardScaler()
+        df_scaled = pd.DataFrame(
+            scaler.fit_transform(df_numeric), columns=df_numeric.columns
+        )
+        logger.info("✅ Standard scaling applied.")
+    elif scale_method == "minmax":
+        scaler = MinMaxScaler()
+        df_scaled = pd.DataFrame(
+            scaler.fit_transform(df_numeric), columns=df_numeric.columns
+        )
+        logger.info("✅ Min-max scaling applied.")
+
+    nbrs = NearestNeighbors(n_neighbors=k + 1)
+    nbrs.fit(df_scaled)
+    distances, _ = nbrs.kneighbors(df_scaled)
+    scores = distances[:, 1:].mean(axis=1)
+
+    threshold = np.percentile(scores, 100 * (1 - contamination))
+    anomaly_flags = scores > threshold
+
+    anomaly_report = pd.DataFrame(
+        {"anomaly_score": scores, "is_anomaly": anomaly_flags}, index=df.index
+    )
+
+    # === Plot score distribution ===
+    os.makedirs(save_path, exist_ok=True)
+    plot_path = os.path.join(save_path, "anomaly_score_distribution.png")
+
+    plt.figure(figsize=(8, 5))
+    sns.histplot(scores, kde=True, bins=30)
+    plt.axvline(threshold, color="red", linestyle="--", label="Anomaly Threshold")
+    plt.title("Anomaly Score Distribution")
+    plt.xlabel("Anomaly Score")
+    plt.ylabel("Frequency")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(plot_path)
+    plt.close()
+
+    logger.info(f"📊 Anomaly score distribution plot saved to {plot_path}")
+
+    # === Post-action on anomalies ===
+    df_post = df.copy()
+    action_taken = "none"
+
+    if post_action == "remove":
+        df_post = df[~anomaly_flags].copy()
+        action_taken = "removed"
+        logger.info("⚠️ Anomalous rows removed.")
+
+    elif post_action == "cap":
+        for col in df_numeric.columns:
+            lower, upper = df[col].quantile(cap_quantiles[0]), df[col].quantile(
+                cap_quantiles[1]
+            )
+            df_post.loc[anomaly_flags, col] = np.clip(
+                df_post.loc[anomaly_flags, col], lower, upper
+            )
+        action_taken = "capped"
+        logger.info(f"⚠️ Anomalous values capped using quantiles {cap_quantiles}.")
+
+    logger.info(
+        f"🎯 Anomaly detection complete. {anomaly_flags.sum()} anomalies flagged."
+    )
+
+    anomaly_plot_full_path = os.path.join(save_path, "anomaly_score_distribution.png")
+
+    anomaly_summary = {
+        "total_anomalies_flagged": int(anomaly_flags.sum()),
+        "contamination_rate": contamination,
+        "post_action": post_action,
+        "anomaly_plot_path": os.path.relpath(anomaly_plot_full_path, start="reports"),
+    }
+
+    return df_post, anomaly_summary, anomaly_report
+
+
+data_cleaner.py
+import pandas as pd
+import numpy as np
+from event_logger import get_logger
+
+logger = get_logger("data_cleaner")
+
+
+def impute_missing_values(df, threshold=0.5, ranked_features=None):
+
+    df = df.copy()
+    total_rows = len(df)
+    cleaning_summary = {"dropped_columns": [], "imputed": {}}
+
+    missing_frac = df.isnull().mean()
+    dropped = missing_frac[missing_frac > threshold].index.tolist()
+    df.drop(columns=dropped, inplace=True)
+    cleaning_summary["dropped_columns"] = dropped
+
+    if dropped:
+        logger.info(f"Dropped columns with >{threshold*100:.0f}% missing: {dropped}")
+
+    columns = ranked_features if ranked_features else df.columns
+    for col in columns:
+        if col in df.columns and df[col].isnull().sum() > 0:
+            if np.issubdtype(df[col].dtype, np.number):
+                skewness = df[col].skew()
+                if abs(skewness) > 1:
+                    df[col] = df[col].fillna(df[col].median())
+                    method = "median (due to high skew)"
+                else:
+                    df[col] = df[col].fillna(df[col].mean())
+                    method = "mean"
+            else:
+                df[col] = df[col].fillna(df[col].mode()[0])
+                method = "mode"
+
+            cleaning_summary["imputed"][col] = method
+            logger.info(f"Imputed missing values in column '{col}' using {method}")
+
+    return df, cleaning_summary
+
+
+def clean_duplicates(df):
+    df = df.copy()
+    before = len(df)
+    df_clean = df.drop_duplicates()
+    after = len(df_clean)
+    removed = before - after
+
+    logger.info(f"Removed {removed} duplicate rows")
+
+    return df_clean, removed
+
+
+def clean_outliers(df, profiling_results, method="cap", ranked_features=None):
+    df = df.copy()
+    columns = ranked_features if ranked_features else profiling_results.keys()
+    outlier_cols_handled = []
+
+    for col in columns:
+        if col not in profiling_results or col not in df.columns:
+            continue
+
+        info = profiling_results[col]
+        if info["count"] == 0:
+            continue
+
+        if info["method"] == "IQR":
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_fence = Q1 - 1.5 * IQR
+            higher_fence = Q3 + 1.5 * IQR
+        else:
+            mean = df[col].mean()
+            std = df[col].std()
+            lower_fence = mean - 3 * std
+            higher_fence = mean + 3 * std
+
+        if method == "remove":
+            df = df[(df[col] >= lower_fence) & (df[col] <= higher_fence)]
+        elif method == "cap":
+            df[col] = np.where(
+                df[col] < lower_fence,
+                lower_fence,
+                np.where(df[col] > higher_fence, higher_fence, df[col]),
+            )
+
+        outlier_cols_handled.append(col)
+
+    logger.info(
+        f"Handled outliers in columns: {outlier_cols_handled} using method: {method}"
+    )
+
+    return df, {"outlier_method": method, "columns": outlier_cols_handled}
+
+
+def fix_inconsistencies(df, inconsistencies, ranked_features=None):
+    df = df.copy()
+    columns = ranked_features if ranked_features else inconsistencies.keys()
+    fixed_cols = []
+
+    for col in columns:
+        if col in inconsistencies and col in df.columns:
+            df[col] = df[col].astype(str).str.strip().str.lower()
+            fixed_cols.append(col)
+
+    if fixed_cols:
+        logger.info(f"Fixed string inconsistencies in columns: {fixed_cols}")
+
+    return df, fixed_cols
+
+
+def clean_data(
+    df,
+    profiling_report,
+    missing_thresh=0.5,
+    outlier_method="cap",
+    ranked_features=None,
+):
+    """
+    Full prioritized data cleaning pipeline.
+    Returns both cleaned dataframe and a cleaning summary dictionary.
+    """
+    logger.info("🧼 Starting prioritized cleaning pipeline...")
+
+    # Step-by-step cleaning
+    df, missing_summary = impute_missing_values(
+        df, threshold=missing_thresh, ranked_features=ranked_features
+    )
+    df, duplicates_removed = clean_duplicates(df)
+    df, outlier_summary = clean_outliers(
+        df,
+        profiling_report["outliers"],
+        method=outlier_method,
+        ranked_features=ranked_features,
+    )
+    df, inconsistency_summary = fix_inconsistencies(
+        df, profiling_report["inconsistencies"], ranked_features=ranked_features
+    )
+
+    # Final safety check: Ensure no numeric NaNs left
+    numeric_cols = df.select_dtypes(include=["number"]).columns
+    if df[numeric_cols].isnull().any().any():
+        logger.info(
+            "✅ Filling any remaining NaNs in numeric columns with mean (final step)."
+        )
+        df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())
+
+    logger.info("🎉 Prioritized data cleaning complete.")
+
+    cleaning_summary = {
+        "missing_handling": missing_summary,
+        "duplicates_removed": duplicates_removed,
+        "outlier_handling": outlier_summary,
+        "inconsistencies_fixed": inconsistency_summary,
+    }
+
+    return df, cleaning_summary
+
+data_loader.py
+import pandas as pd
+import os
+import warnings
+
+
+def load_data(
+    file_paths, column_names=None, missing_values=["?"], header=None, skiprows=None
+):
+    """
+    Loads one or more files (CSV, Excel, or JSON) into a single pandas DataFrame.
+
+    Args:
+        file_paths (str or list of str): Path or list of paths to file(s).
+        column_names (list, optional): Column names to assign if the file has no header.
+            Ignored if 'header' is specified. Defaults to None.
+        missing_values (list, optional): Strings to interpret as missing/NaN. Defaults to ["?"].
+        header (int or None, optional): Row number to use as column headers (0-indexed).
+            Set to None if the file has no header. Defaults to None.
+        skiprows (int or None, optional): Number of lines to skip at the start of the file. Defaults to None.
+
+    Raises:
+        FileNotFoundError: If any specified file path does not exist.
+        ValueError: If any specified file is empty or cannot be read.
+
+    Returns:
+        pd.DataFrame: A pandas DataFrame containing the loaded data.
+            If multiple files are provided, they are concatenated into a single DataFrame.
+    """
+    if header is not None and column_names is not None:
+        warnings.warn(
+            "Both 'header' and 'column_names' provided. 'column_names' will be ignored."
+        )
+
+    # Ensure file_paths is a list
+    if isinstance(file_paths, str):
+        file_paths = [file_paths]
+
+    dataframes = []
+
+    for path in file_paths:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"File not found: {path}")
+        if os.path.getsize(path) == 0:
+            raise ValueError(f"File is empty, cannot proceed with loading.: {path}")
+
+        # Get the file extension to decide the loading function
+        ext = os.path.splitext(path)[1].lower()
+
+        try:
+            if ext == ".csv":
+                df = pd.read_csv(
+                    path,
+                    header=header,
+                    names=column_names if header is None else None,
+                    na_values=missing_values,
+                    skipinitialspace=True,
+                    skiprows=skiprows,
+                )
+            elif ext in [".xls", ".xlsx"]:
+                df = pd.read_excel(
+                    path,
+                    header=header,
+                    names=column_names if header is None else None,
+                    na_values=missing_values,
+                    skiprows=skiprows,
+                )
+            elif ext == ".json":
+                df = pd.read_json(
+                    path,
+                    encoding="utf-8",
+                )
+            else:
+                raise ValueError(f"Unsupported file type: {ext}")
+
+            dataframes.append(df)
+        except Exception as e:
+            raise ValueError(f"Error loading {path}: {str(e)}")
+
+    if len(dataframes) == 1:
+        return dataframes[0]
+    else:
+        return pd.concat(dataframes, ignore_index=True)
+
+
+data_profiler.py
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from event_logger import get_logger
+
+logger = get_logger("data_profiler")
+KURTOSIS_THRESHOLD = 0
+
+
+def profile_data(df, save_path="plots", target_column=None):
+    logger.info("🔍 Profiling started...")
+    os.makedirs(save_path, exist_ok=True)
+
+    # missing values and duplicates
+    missing_values = df.isnull().sum().to_dict()
+    duplicate_rows = int(df.duplicated().sum())
+
+    # placeholders for profiling
+    outliers = {}
+    inconsistencies = {}
+    summary_stats = df.describe(include="all").to_dict()
+
+    # identify numeric and categorical columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    cat_cols = df.select_dtypes(include=["object", "category"]).columns
+
+    # detect outliers per column
+    for col in numeric_cols:
+        series = df[col].dropna()
+        if series.empty:
+            continue
+        kurt = series.kurtosis()
+        if kurt > KURTOSIS_THRESHOLD:
+            q1, q3 = series.quantile([0.25, 0.75])
+            iqr = q3 - q1
+            lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+            method = "IQR"
+        else:
+            mu, sigma = series.mean(), series.std()
+            lower, upper = mu - 3 * sigma, mu + 3 * sigma
+            method = "zscore"
+        count = int(((series < lower) | (series > upper)).sum())
+        outliers[col] = {"method": method, "count": count}
+
+    # detect string inconsistencies
+    for col in cat_cols:
+        vals = df[col].dropna().astype(str).unique()
+        cleaned = [v.strip().lower() for v in vals]
+        if len(set(cleaned)) < len(vals):
+            inconsistencies[col] = list(vals)
+
+    # correlation heatmap
+    corr = df[numeric_cols].corr()
+    heatmap_path = os.path.join(save_path, "correlation_heatmap.png")
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(corr, cmap="coolwarm")
+    plt.title("Correlation Heatmap")
+    plt.tight_layout()
+    plt.savefig(heatmap_path)
+    plt.close()
+    heatmap_path = os.path.relpath(heatmap_path, start="reports")
+
+    # top correlations
+    corr_pairs = corr.abs().unstack()
+    corr_pairs = corr_pairs[corr_pairs < 1.0]
+    top_pairs = corr_pairs.sort_values(ascending=False).drop_duplicates().head(5)
+    top_list = []
+    for (c1, c2), val in top_pairs.items():
+        top_list.append({"Feature 1": c1, "Feature 2": c2, "Correlation": val})
+
+    # target distribution
+    target_distribution_path = None
+    if target_column and target_column in df.columns:
+        if df[target_column].dtype.name in ["object", "category"]:
+            counts = df[target_column].value_counts()
+            plt.figure(figsize=(6, 6))
+            counts.plot.pie(
+                autopct="%1.1f%%", startangle=90, explode=[0.05] * len(counts)
+            )
+            plt.title(f"Distribution of {target_column}")
+            plt.ylabel("")
+            target_path = os.path.join(save_path, "target_distribution.png")
+            plt.tight_layout()
+            plt.savefig(target_path)
+            plt.close()
+            target_distribution_path = os.path.relpath(target_path, start="reports")
+
+    profiling_report = {
+        "missing_values": missing_values,
+        "duplicate_rows": duplicate_rows,
+        "outliers": outliers,
+        "inconsistencies": inconsistencies,
+        "summary_stats": summary_stats,
+        "correlation_heatmap_path": heatmap_path,
+        "top_correlations": top_list,
+        "target_distribution_path": target_distribution_path,
+    }
+
+    logger.info("✅ Profiling complete.")
+    return profiling_report
+
+event_logger.py
+import logging
+import json
+from logging import Handler
+from datetime import datetime, timezone
+import os
+
+
+class JSONLogHandler(Handler):
+    def __init__(self, filename="logs/system_log.jsonl"):
+        super().__init__()
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        self.filename = filename
+
+    def emit(self, record):
+        log_entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "level": record.levelname,
+            "module": record.module,
+            "message": record.getMessage(),
+        }
+        if hasattr(record, "details"):
+            log_entry["details"] = record.details
+
+        with open(self.filename, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry) + "\n")
+
+
+def get_logger(name):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    if not logger.hasHandlers():
+        handler = JSONLogHandler()
+        logger.addHandler(handler)
+    return logger
+
+
+feature_ranker.py
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+import os
+from event_logger import get_logger
+
+logger = get_logger("feature_ranker")
+
+
+def rank_features(
+    X,
+    y,
+    task_type="regression",
+    save_dir="plots",
+    plot_name="feature_importance.png",
+):
+    """
+    Ranks features based on their importance using a Random Forest model.
+    Now returns importance scores AND saved plot path.
+
+    Args:
+        X (pd.DataFrame): Feature matrix.
+        y (pd.Series): Target variable.
+        task_type (str): "classification" or "regression".
+        save_dir (str): Directory to save plots.
+        plot_name (str): Name for the output plot.
+
+    Returns:
+        (pd.Series, str): (Sorted feature importances, path to saved plot)
+    """
+    # Handle categorical targets
+    if y.dtype == "object" or y.dtype.name == "category":
+        le = LabelEncoder()
+        y = le.fit_transform(y)
+
+    if task_type == "classification":
+        model = RandomForestClassifier(random_state=42)
+    elif task_type == "regression":
+        model = RandomForestRegressor(random_state=42)
+    else:
+        raise ValueError("Invalid task_type. Choose 'classification' or 'regression'.")
+
+    if X.select_dtypes(include=["object", "category"]).shape[1] > 0:
+        X = pd.get_dummies(X)
+
+    model.fit(X, y)
+    importances = pd.Series(model.feature_importances_, index=X.columns)
+    importances_sorted = importances.sort_values(ascending=False)
+
+    # Save feature importance plot
+    os.makedirs(save_dir, exist_ok=True)
+    plot_path = os.path.join(save_dir, plot_name)
+
+    plt.figure(figsize=(10, 6))
+    importances_sorted.iloc[:7].plot(kind="bar")  # Show only top 7 features
+    plt.title("Feature Importance Ranking")
+    plt.ylabel("Importance Score")
+    plt.xticks(rotation=45, ha="right")  # Rotate x-axis labels for better readability
+    plt.tight_layout()
+    plt.savefig(plot_path)
+    plt.close()
+
+    logger.info(f"📊 Feature importance plot saved to {plot_path}")
+
+    return importances_sorted, plot_path
+
+
+main.py
+import os
+import pandas as pd
+
+from data_loader import load_data
+from data_profiler import profile_data
+from data_cleaner import clean_data
+from anomaly_detector import detect_anomalies_with_knn
+from feature_ranker import rank_features
+from model_evaluator import evaluate_with_random_forest
+from adaptive_controller import reflect_and_adapt, log_and_reflect_adaptation
+from report_generator import generate_html_report
+
+# === Configurations ===
+DATA_PATH = "datasets/adult_data.xlsx"  # <-- change dataset
+TARGET_COLUMN = "income"  # <-- change depending on dataset
+SAVE_DIR = "plots"
+USE_ADAPTIVE_POLICY = True  # Toggle: use default or adaptive
+
+
+def main():
+    # === 1. Load Data ===
+    df = load_data(DATA_PATH, header=0)
+    df.columns = df.columns.str.strip()
+    print("✅ Dataset loaded.")
+
+    # Split features and target
+    X = df.drop(columns=[TARGET_COLUMN])
+    y = df[TARGET_COLUMN]
+
+    # === 2. Profile Data ===
+    profiling_summary = profile_data(
+        df, save_path=SAVE_DIR, target_column=TARGET_COLUMN
+    )
+    print("✅ Data profiling completed.")
+
+    # === 3. Feature Ranking (Before Cleaning) ===
+    # Use a copy, drop rows with any NaN in features or target
+    X_rank = X.copy()
+    y_rank = y.copy()
+    mask_rank = X_rank.notnull().all(axis=1) & y_rank.notnull()
+    X_rank = X_rank.loc[mask_rank]
+    y_rank = y_rank.loc[mask_rank]
+    task_type_rank = "regression" if y_rank.dtype.kind in "ifu" else "classification"
+    ranked_before, importance_before_path = rank_features(
+        X_rank,
+        y_rank,
+        task_type=task_type_rank,
+        save_dir=SAVE_DIR,
+        plot_name="feature_importance_before.png",
+    )
+    print("✅ Feature importance (before cleaning) ranked.")
+
+    # === 4. Clean Data ===
+    dataset_size = len(df)
+    if USE_ADAPTIVE_POLICY:
+        policy = reflect_and_adapt()
+    else:
+        policy = {"outlier_method": "remove", "scale_method": "standard"}
+
+    # Modify cleaning based on dataset size
+    if dataset_size < 100:
+        print(
+            f"⚠️ Small dataset detected ({dataset_size} rows) — using softer cleaning."
+        )
+        policy["outlier_method"] = "cap"
+        anomaly_detection_enabled = False
+    else:
+        anomaly_detection_enabled = True
+
+    print(f"🔧 Using Policy: {policy}")
+
+    X_clean, cleaning_summary = clean_data(
+        X,
+        profiling_summary,
+        outlier_method=policy["outlier_method"],
+    )
+    print("✅ Data cleaning completed.")
+
+    # === 5. Anomaly Detection ===
+    if anomaly_detection_enabled:
+        X_clean_post_anomaly, anomaly_summary, _ = detect_anomalies_with_knn(
+            X_clean,
+            scale_method=policy.get("scale_method", "standard"),
+            post_action=policy["outlier_method"],
+            save_path=SAVE_DIR,
+        )
+        print("✅ Anomaly detection completed.")
+    else:
+        X_clean_post_anomaly = X_clean.copy()
+        anomaly_summary = {
+            "total_anomalies_flagged": 0,
+            "post_action": "skipped (small dataset)",
+            "anomaly_plot_path": None,
+            "contamination_rate": 0,
+        }
+        print("⚠️ Anomaly detection skipped for small dataset.")
+
+    # === Align and drop NaNs in target for subsequent steps ===
+    y_aligned = y.reindex(X_clean_post_anomaly.index)
+    mask_valid = y_aligned.notnull()
+    X_final = X_clean_post_anomaly.loc[mask_valid]
+    y_final = y_aligned.loc[mask_valid]
+
+    # === 6. Feature Importance (Post-Cleaning) ===
+    task_type = "regression" if y_final.dtype.kind in "ifu" else "classification"
+    ranked_after, importance_after_path = rank_features(
+        X_final,
+        y_final,
+        task_type=task_type,
+        save_dir=SAVE_DIR,
+        plot_name="feature_importance_after.png",
+    )
+    print("✅ Feature importance (after cleaning) ranked.")
+
+    # === Prepare data for evaluation ===
+    raw_mask = y.notnull()
+    X_raw_eval = X.loc[raw_mask]
+    y_raw_eval = y.loc[raw_mask]
+
+    # === 7. Evaluate Model (Raw vs Cleaned) ===
+    evaluation_summary = evaluate_with_random_forest(
+        X_raw=X_raw_eval,
+        y_raw=y_raw_eval,
+        X_clean=X_final,
+        y_clean=y_final,
+        save_dir=SAVE_DIR,
+    )
+    print("✅ Model evaluation completed.")
+
+    # === 8. Log run + reflect ===
+    if USE_ADAPTIVE_POLICY:
+        log_and_reflect_adaptation(
+            evaluation=evaluation_summary["Cleaned Data Evaluation"],
+            policy=policy,
+            decision="Reflect after run",
+            extra_info={"dataset": os.path.basename(DATA_PATH)},
+        )
+    print("✅ Adaptive controller reflection done.")
+
+    # === 9. Generate Final HTML Report ===
+    report_path = generate_html_report(
+        profiling_summary=profiling_summary,
+        cleaning_summary=cleaning_summary,
+        anomaly_summary=anomaly_summary,
+        feature_importance_before_path=importance_before_path,
+        feature_importance_after_path=importance_after_path,
+        evaluation_summary=evaluation_summary,
+        policy_info=policy,
+        save_dir="reports",
+        template_dir="templates",
+    )
+    print(f"🎉 Report generated at: {report_path}")
+
+
+if __name__ == "__main__":
+    main()
+
+
+model_evaluator.py
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    f1_score,
+    accuracy_score,
+    mean_squared_error,
+    r2_score,
+)
+from sklearn.utils.multiclass import type_of_target
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from event_logger import get_logger
+
+logger = get_logger("model_evaluator")
+MISSING_THRESHOLD = 0.05
+
+
+def evaluate_model(y_true, y_pred):
+    target_type = type_of_target(y_true)
+    if target_type in ["binary", "multiclass"]:
+        return evaluate_classification(y_true, y_pred)
+    elif target_type in ["continuous", "continuous-multioutput"]:
+        return evaluate_regression(y_true, y_pred)
+    else:
+        raise ValueError(f"Unsupported target type: {target_type}")
+
+
+def evaluate_classification(y_true, y_pred):
+    metrics = {
+        "Accuracy": accuracy_score(y_true, y_pred),
+        "Weighted F1 Score": f1_score(y_true, y_pred, average="weighted"),
+    }
+    logger.info("Classification evaluation completed.")
+    return metrics
+
+
+def evaluate_regression(y_true, y_pred):
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    metrics = {
+        "RMSE": rmse,
+        "R² Score": r2_score(y_true, y_pred),
+    }
+    logger.info("Regression evaluation completed.")
+    return metrics
+
+
+def minimally_clean_raw_data(X, y):
+    # 1) Drop rows where the target is missing
+    mask = y.notnull()
+    Xc = X.loc[mask].copy()
+    yc = y.loc[mask].copy()
+
+    # 2) Decide which columns to impute vs. drop on
+    miss_frac = Xc.isnull().mean()
+    to_impute = miss_frac[miss_frac > MISSING_THRESHOLD].index.tolist()
+    to_dropna = miss_frac[miss_frac <= MISSING_THRESHOLD].index.tolist()
+
+    # 3) Drop any row with NaN in low-missingness cols
+    if to_dropna:
+        rows_ok = Xc[to_dropna].notnull().all(axis=1)
+        Xc = Xc.loc[rows_ok]
+        yc = yc.loc[rows_ok]
+
+    # 4) Impute high-missingness cols, splitting by dtype
+    if to_impute:
+        # numeric columns → mean
+        num_cols = Xc[to_impute].select_dtypes(include=[np.number]).columns.tolist()
+        # categorical (everything else) → most frequent
+        cat_cols = [c for c in to_impute if c not in num_cols]
+
+        if num_cols:
+            num_imp = SimpleImputer(strategy="mean")
+            Xc[num_cols] = num_imp.fit_transform(Xc[num_cols])
+
+        if cat_cols:
+            cat_imp = SimpleImputer(strategy="most_frequent")
+            Xc[cat_cols] = cat_imp.fit_transform(Xc[cat_cols])
+
+    # 5) Final sweep: drop any rows still containing NaNs
+    final_ok = Xc.notnull().all(axis=1)
+    Xc = Xc.loc[final_ok]
+    yc = yc.loc[final_ok]
+
+    return Xc, yc
+
+
+def plot_evaluation_comparison(
+    raw_metrics, clean_metrics, task_type, save_path="plots/performance_comparison.png"
+):
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    if task_type in ["binary", "multiclass"]:
+        metrics = ["Accuracy", "Weighted F1 Score"]
+    else:
+        metrics = ["RMSE", "R² Score"]
+
+    raw_vals = [raw_metrics.get(m, np.nan) for m in metrics]
+    clean_vals = [clean_metrics.get(m, np.nan) for m in metrics]
+    x = np.arange(len(metrics))
+    width = 0.35
+
+    plt.figure(figsize=(8, 5))
+    plt.bar(x - width / 2, raw_vals, width, label="Raw Data")
+    plt.bar(x + width / 2, clean_vals, width, label="Cleaned Data")
+    plt.xticks(x, metrics)
+    plt.ylabel("Score")
+    plt.title("Model Performance Comparison")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+
+    logger.info(f"📊 Performance plot saved to {save_path}")
+    return save_path
+
+
+def evaluate_with_random_forest(
+    X_raw, y_raw, X_clean, y_clean, test_size=0.2, random_state=42, save_dir="plots"
+):
+    target_type = type_of_target(y_raw)
+    if target_type in ["binary", "multiclass"]:
+        ModelClass = RandomForestClassifier
+    elif target_type in ["continuous", "continuous-multioutput"]:
+        ModelClass = RandomForestRegressor
+    else:
+        raise ValueError(f"Unsupported target type: {target_type}")
+
+    # 1. Raw data cleaning & encoding
+    try:
+        X_raw_ready, y_raw_ready = minimally_clean_raw_data(X_raw, y_raw)
+        X_raw_ready = pd.get_dummies(X_raw_ready, drop_first=True)
+        X_train_raw, X_test_raw, y_train_raw, y_test_raw = train_test_split(
+            X_raw_ready, y_raw_ready, test_size=test_size, random_state=random_state
+        )
+        model_raw = ModelClass(random_state=random_state)
+        model_raw.fit(X_train_raw, y_train_raw)
+        y_pred_raw = model_raw.predict(X_test_raw)
+        raw_metrics = evaluate_model(y_test_raw, y_pred_raw)
+    except Exception as e:
+        logger.error(f"❌ Raw data evaluation failed: {e}")
+        raw_metrics = {"Error": "Raw evaluation failed."}
+
+    # 2. Cleaned data encoding
+    try:
+        X_clean_enc = pd.get_dummies(X_clean, drop_first=True)
+        X_train_clean, X_test_clean, y_train_clean, y_test_clean = train_test_split(
+            X_clean_enc, y_clean, test_size=test_size, random_state=random_state
+        )
+        model_clean = ModelClass(random_state=random_state)
+        model_clean.fit(X_train_clean, y_train_clean)
+        y_pred_clean = model_clean.predict(X_test_clean)
+        clean_metrics = evaluate_model(y_test_clean, y_pred_clean)
+    except Exception as e:
+        logger.error(f"❌ Clean data evaluation failed: {e}")
+        clean_metrics = {"Error": "Clean evaluation failed."}
+
+    logger.info("Model evaluation complete.")
+
+    # 3. Performance diff
+    perf_diff = {}
+    if "Error" not in raw_metrics and "Error" not in clean_metrics:
+        if target_type in ["binary", "multiclass"]:
+            comps = ["Accuracy", "Weighted F1 Score"]
+        else:
+            comps = ["RMSE", "R² Score"]
+        for m in comps:
+            rv = raw_metrics.get(m)
+            cv = clean_metrics.get(m)
+            if rv is not None and cv is not None:
+                try:
+                    if m == "RMSE":
+                        diff = ((rv - cv) / rv) * 100
+                    else:
+                        diff = ((cv - rv) / rv) * 100
+                    perf_diff[f"{m} % Difference"] = round(diff, 2)
+                except ZeroDivisionError:
+                    perf_diff[f"{m} % Difference"] = None
+    else:
+        perf_diff["Error"] = "Could not compute differences"
+
+    # 4. Plot comparison
+    try:
+        plot_path = plot_evaluation_comparison(
+            raw_metrics,
+            clean_metrics,
+            target_type,
+            save_path=os.path.join(save_dir, "performance_comparison.png"),
+        )
+    except Exception as e:
+        logger.error(f"❌ Plot generation failed: {e}")
+        plot_path = None
+
+    return {
+        "Raw Data Evaluation": raw_metrics,
+        "Cleaned Data Evaluation": clean_metrics,
+        "Performance Difference (%)": perf_diff,
+        "Performance Plot": plot_path,
+    }
+
+
+report_generator.py
+import os
+from jinja2 import Environment, FileSystemLoader
+from datetime import datetime
+
+
+def categorize_plots(plot_folder):
+    plots = os.listdir(plot_folder)
+    categorized = {
+        "correlation_matrices": [],
+        "anomaly_distributions": [],
+        "feature_importances": [],
+        "performance_plots": [],
+    }
+
+    for plot in plots:
+        if "correlation" in plot:
+            categorized["correlation_matrices"].append(os.path.join(plot_folder, plot))
+        elif "anomaly_score" in plot:
+            categorized["anomaly_distributions"].append(os.path.join(plot_folder, plot))
+        elif "feature_importance" in plot:
+            categorized["feature_importances"].append(os.path.join(plot_folder, plot))
+        elif "performance_comparison" in plot:
+            categorized["performance_plots"].append(os.path.join(plot_folder, plot))
+
+    return categorized
+
+
+def generate_html_report(
+    profiling_summary,
+    cleaning_summary,
+    anomaly_summary,
+    feature_importance_before_path,
+    feature_importance_after_path,
+    evaluation_summary,
+    policy_info,
+    save_dir="reports",
+    template_dir="templates",
+):
+
+    os.makedirs(save_dir, exist_ok=True)
+    env = Environment(loader=FileSystemLoader(template_dir))
+    template = env.get_template("report_template.html")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_filename = f"report_{timestamp}.html"
+    report_path = os.path.join(save_dir, report_filename)
+
+    feature_importance_before_path = os.path.relpath(
+        feature_importance_before_path, start=save_dir
+    )
+    feature_importance_after_path = os.path.relpath(
+        feature_importance_after_path, start=save_dir
+    )
+    perf_plot_path = os.path.relpath(
+        evaluation_summary["Performance Plot"], start=save_dir
+    )
+
+    anomaly_plot_path = anomaly_summary.get("anomaly_plot_path", None)
+
+    # Split cleaning_summary nicely
+    dropped_columns = cleaning_summary.get("missing_handling", {}).get(
+        "dropped_columns", []
+    )
+    imputed_columns = cleaning_summary.get("missing_handling", {}).get("imputed", {})
+    outlier_handling = cleaning_summary.get("outlier_handling", {})
+
+    context = {
+        "timestamp": timestamp,
+        "profiling": profiling_summary,
+        "cleaning_summary": cleaning_summary,
+        "cleaning_dropped": dropped_columns,
+        "cleaning_imputed": imputed_columns,
+        "outlier_handling": outlier_handling,
+        "anomaly_summary": anomaly_summary,
+        "feature_importance_before_path": feature_importance_before_path,
+        "feature_importance_after_path": feature_importance_after_path,
+        "evaluation": {
+            "Raw Data Evaluation": evaluation_summary["Raw Data Evaluation"],
+            "Cleaned Data Evaluation": evaluation_summary["Cleaned Data Evaluation"],
+            "Performance Plot": perf_plot_path,
+            "Performance_Difference": evaluation_summary.get(
+                "Performance Difference (%)", {}
+            ),
+        },
+        "policy_info": policy_info,
+    }
+
+    html = template.render(**context)
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    return report_path
+
+
+run_history_logger.py
+import json
+import os
+from datetime import datetime, timezone
+
+
+class RunHistoryLogger:
+    def __init__(self, log_file="logs/run_history.jsonl"):
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        self.log_file = log_file
+
+    def log_run_summary(self, evaluation, policy, decision, extra_info=None):
+        """
+        Logs a full pipeline run's evaluation, policy, and decision outcome.
+
+        Args:
+            evaluation (dict): Evaluation metrics like RMSE, F1, etc.
+            policy (dict): Configuration used for this run.
+            decision (str): What decision was made (e.g. keep_policy, change_imputation).
+            extra_info (dict): Optional additional context (e.g. model type, notes).
+        """
+        log_entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "evaluation": evaluation,
+            "policy": policy,
+            "decision": decision,
+        }
+
+        if extra_info:
+            log_entry["extra_info"] = extra_info
+
+        with open(self.log_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry) + "\n")
+
+
+# Singleton instance for easy access
+run_logger = RunHistoryLogger()
+log_run_summary = run_logger.log_run_summary

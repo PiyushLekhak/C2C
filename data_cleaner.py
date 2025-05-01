@@ -5,37 +5,58 @@ from event_logger import get_logger
 logger = get_logger("data_cleaner")
 
 
-def impute_missing_values(df, threshold=0.5, ranked_features=None):
-
+def impute_missing_values(df, threshold=0.5, imputation_strategy=None):
     df = df.copy()
-    total_rows = len(df)
-    cleaning_summary = {"dropped_columns": [], "imputed": {}}
+    cleaning_summary = {
+        "dropped_columns": [],
+        "imputed_values": {},
+        "imputation_counts": {},
+    }
 
+    # === Drop columns with too much missing data ===
     missing_frac = df.isnull().mean()
     dropped = missing_frac[missing_frac > threshold].index.tolist()
     df.drop(columns=dropped, inplace=True)
     cleaning_summary["dropped_columns"] = dropped
 
     if dropped:
-        logger.info(f"Dropped columns with >{threshold*100:.0f}% missing: {dropped}")
+        logger.info(f"🗑️ Dropped columns with >{threshold*100:.0f}% missing: {dropped}")
 
-    columns = ranked_features if ranked_features else df.columns
-    for col in columns:
-        if col in df.columns and df[col].isnull().sum() > 0:
-            if np.issubdtype(df[col].dtype, np.number):
-                skewness = df[col].skew()
-                if abs(skewness) > 1:
-                    df[col] = df[col].fillna(df[col].median())
-                    method = "median (due to high skew)"
-                else:
-                    df[col] = df[col].fillna(df[col].mean())
-                    method = "mean"
+    # === Impute remaining missing values ===
+    for col in df.columns:
+        if df[col].isnull().sum() == 0:
+            continue  # Skip columns with no missing values
+
+        count = df[col].isnull().sum()  # Number of missing values
+
+        if np.issubdtype(df[col].dtype, np.number):  # Numeric columns
+            skewness = df[col].skew()
+
+            # If imputation strategy is provided, use it
+            if imputation_strategy == "median":
+                impute_val = df[col].median()
+                method = "median (from policy)"
+            elif imputation_strategy == "mean":
+                impute_val = df[col].mean()
+                method = "mean (from policy)"
             else:
-                df[col] = df[col].fillna(df[col].mode()[0])
-                method = "mode"
+                # Fallback rule-based imputation based on skewness
+                if abs(skewness) > 1:
+                    impute_val = df[col].median()
+                    method = "median (skew-aware)"
+                else:
+                    impute_val = df[col].mean()
+                    method = "mean (skew-aware)"
+        else:  # Non-numeric columns (categorical)
+            impute_val = df[col].mode()[0]
+            method = "mode"
 
-            cleaning_summary["imputed"][col] = method
-            logger.info(f"Imputed missing values in column '{col}' using {method}")
+        # Impute missing values and record the summary
+        df[col] = df[col].fillna(impute_val)
+        cleaning_summary["imputed_values"][col] = method
+        cleaning_summary["imputation_counts"][col] = int(count)
+
+        logger.info(f"🧩 Imputed {count} missing values in '{col}' using {method}")
 
     return df, cleaning_summary
 
@@ -46,67 +67,67 @@ def clean_duplicates(df):
     df_clean = df.drop_duplicates()
     after = len(df_clean)
     removed = before - after
-
-    logger.info(f"Removed {removed} duplicate rows")
-
+    logger.info(f"🚿 Removed {removed} duplicate rows")
     return df_clean, removed
 
 
-def clean_outliers(df, profiling_results, method="cap", ranked_features=None):
+def clean_outliers(df, profiling_results, method="cap"):
     df = df.copy()
-    columns = ranked_features if ranked_features else profiling_results.keys()
     outlier_cols_handled = []
+    outlier_counts_capped = {}
 
-    for col in columns:
-        if col not in profiling_results or col not in df.columns:
-            continue
-
-        info = profiling_results[col]
-        if info["count"] == 0:
+    for col, info in profiling_results.items():
+        if col not in df.columns or info["count"] == 0:
             continue
 
         if info["method"] == "IQR":
             Q1 = df[col].quantile(0.25)
             Q3 = df[col].quantile(0.75)
             IQR = Q3 - Q1
-            lower_fence = Q1 - 1.5 * IQR
-            higher_fence = Q3 + 1.5 * IQR
-        else:
+            lower = Q1 - 1.5 * IQR
+            upper = Q3 + 1.5 * IQR
+        else:  # Z-score
             mean = df[col].mean()
             std = df[col].std()
-            lower_fence = mean - 3 * std
-            higher_fence = mean + 3 * std
+            lower = mean - 3 * std
+            upper = mean + 3 * std
 
-        if method == "remove":
-            df = df[(df[col] >= lower_fence) & (df[col] <= higher_fence)]
-        elif method == "cap":
-            df[col] = np.where(
-                df[col] < lower_fence,
-                lower_fence,
-                np.where(df[col] > higher_fence, higher_fence, df[col]),
-            )
+        original = df[col].copy()
+
+        if method == "cap":
+            df[col] = np.clip(df[col], lower, upper)
+            capped = (original != df[col]).sum()
+            outlier_counts_capped[col] = int(capped)
+        elif method == "remove":
+            df = df[(df[col] >= lower) & (df[col] <= upper)]
+            # Since rows are dropped, can't count per column anymore
 
         outlier_cols_handled.append(col)
 
     logger.info(
-        f"Handled outliers in columns: {outlier_cols_handled} using method: {method}"
+        f"📉 Outlier handling complete for: {outlier_cols_handled} using method: {method}"
     )
 
-    return df, {"outlier_method": method, "columns": outlier_cols_handled}
+    return df, {
+        "outlier_method": method,
+        "columns": outlier_cols_handled,
+        "capped_counts": (
+            outlier_counts_capped if method == "cap" else "rows_removed_globally"
+        ),
+    }
 
 
-def fix_inconsistencies(df, inconsistencies, ranked_features=None):
+def fix_inconsistencies(df, inconsistencies):
     df = df.copy()
-    columns = ranked_features if ranked_features else inconsistencies.keys()
     fixed_cols = []
 
-    for col in columns:
-        if col in inconsistencies and col in df.columns:
+    for col in inconsistencies:
+        if col in df.columns:
             df[col] = df[col].astype(str).str.strip().str.lower()
             fixed_cols.append(col)
 
     if fixed_cols:
-        logger.info(f"Fixed string inconsistencies in columns: {fixed_cols}")
+        logger.info(f"🔠 Fixed string inconsistencies in: {fixed_cols}")
 
     return df, fixed_cols
 
@@ -116,44 +137,48 @@ def clean_data(
     profiling_report,
     missing_thresh=0.5,
     outlier_method="cap",
-    ranked_features=None,
+    imputation_strategy=None,
 ):
     """
-    Full prioritized data cleaning pipeline.
-    Returns both cleaned dataframe and a cleaning summary dictionary.
+    Full data cleaning pipeline for missing, duplicate, outlier, and inconsistency handling.
+    Returns cleaned dataframe and structured summary.
     """
-    logger.info("🧼 Starting prioritized cleaning pipeline...")
+    logger.info("🧼 Starting data cleaning pipeline...")
 
-    # Step-by-step cleaning
+    # Step 1: Impute missing values (after dropping high-missing columns)
     df, missing_summary = impute_missing_values(
-        df, threshold=missing_thresh, ranked_features=ranked_features
+        df, threshold=missing_thresh, imputation_strategy=imputation_strategy  # <-- NEW
     )
+
+    # Step 2: Remove duplicates
     df, duplicates_removed = clean_duplicates(df)
+
+    # Step 3: Handle outliers
     df, outlier_summary = clean_outliers(
         df,
-        profiling_report["outliers"],
+        profiling_report.get("outliers", {}),
         method=outlier_method,
-        ranked_features=ranked_features,
-    )
-    df, inconsistency_summary = fix_inconsistencies(
-        df, profiling_report["inconsistencies"], ranked_features=ranked_features
     )
 
-    # Final safety check: Ensure no numeric NaNs left
-    numeric_cols = df.select_dtypes(include=["number"]).columns
-    if df[numeric_cols].isnull().any().any():
-        logger.info(
-            "✅ Filling any remaining NaNs in numeric columns with mean (final step)."
-        )
-        df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())
+    # Step 4: Fix categorical inconsistencies
+    df, inconsistencies_fixed = fix_inconsistencies(
+        df,
+        profiling_report.get("inconsistencies", {}),
+    )
 
-    logger.info("🎉 Prioritized data cleaning complete.")
+    # Step 5: Ensure no remaining numeric NaNs (last safety)
+    num_cols = df.select_dtypes(include="number").columns
+    if df[num_cols].isnull().any().any():
+        df[num_cols] = df[num_cols].fillna(df[num_cols].mean())
+        logger.info("🧯 Final fill of remaining numeric NaNs with column means.")
 
     cleaning_summary = {
         "missing_handling": missing_summary,
         "duplicates_removed": duplicates_removed,
         "outlier_handling": outlier_summary,
-        "inconsistencies_fixed": inconsistency_summary,
+        "inconsistencies_fixed": inconsistencies_fixed,
+        "final_shape": df.shape,
     }
 
+    logger.info("✅ Data cleaning pipeline complete.")
     return df, cleaning_summary
