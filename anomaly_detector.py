@@ -1,3 +1,5 @@
+# May switch to isolation forest if time allows
+# Need to encode categorical variables too
 import os
 import numpy as np
 import pandas as pd

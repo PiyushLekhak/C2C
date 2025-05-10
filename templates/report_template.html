@@ -199,6 +199,9 @@
           {% endif %}
         </td>
       </tr>
+      {% if outlier_handling.rows_removed is defined %}
+      <tr><th>Rows Removed</th><td>{{ outlier_handling.rows_removed }}</td></tr>
+      {% endif %}
     </table>
   </div>
 
@@ -240,7 +243,7 @@
       <p>No anomalies detected or anomaly detection was skipped.</p>
     {% endif %}
     {% if anomaly_report %}
-    <h3>Top 10 Anomalous Records</h3>
+    <h3>Top 5 Anomalous Records</h3>
     <table>
       <tr>
         {% for col in anomaly_report[0].keys() %}

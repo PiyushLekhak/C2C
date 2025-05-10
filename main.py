@@ -38,6 +38,7 @@ def main():
             4,
         ),
         "outliers_before": profile_before.get("total_outliers", 0),
+        "profile_shape": df.shape,
     }
 
     if USE_ADAPTIVE_POLICY:
@@ -88,7 +89,7 @@ def main():
         5
     )
 
-    # === 9. Feature Ranking (after full cleaning only) ===
+    # === 9. Feature Ranking ===
     print("🏅 Ranking features...")
     task_type = "regression" if y_aligned.dtype.kind in "ifu" else "classification"
     feature_scores, top_features, importance_path = rank_features(

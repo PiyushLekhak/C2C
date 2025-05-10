@@ -72,49 +72,73 @@ def clean_duplicates(df):
 
 
 def clean_outliers(df, profiling_results, method="cap"):
-    df = df.copy()
+    """
+    Handles outliers by either capping or removing rows.
+    Returns:
+        - df_cleaned: DataFrame after outlier treatment
+        - summary: dict with
+            - outlier_method: "cap" or "remove"
+            - columns: list of columns processed
+            - capped_counts (if cap): dict of {col: # capped}
+            - rows_removed (if remove): total rows dropped
+    """
+    df_copy = df.copy()
     outlier_cols_handled = []
-    outlier_counts_capped = {}
+    capped_counts = {}
+
+    # === If remove mode, capture initial row count ===
+    initial_rows = len(df_copy)
 
     for col, info in profiling_results.items():
-        if col not in df.columns or info["count"] == 0:
+        if col not in df_copy.columns or info.get("count", 0) == 0:
             continue
 
+        # Determine cutoffs
         if info["method"] == "IQR":
-            Q1 = df[col].quantile(0.25)
-            Q3 = df[col].quantile(0.75)
+            Q1 = df_copy[col].quantile(0.25)
+            Q3 = df_copy[col].quantile(0.75)
             IQR = Q3 - Q1
-            lower = Q1 - 1.5 * IQR
-            upper = Q3 + 1.5 * IQR
-        else:  # Z-score
-            mean = df[col].mean()
-            std = df[col].std()
-            lower = mean - 3 * std
-            upper = mean + 3 * std
+            lower, upper = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR
+        else:  # "zscore"
+            mean = df_copy[col].mean()
+            std = df_copy[col].std()
+            lower, upper = mean - 3 * std, mean + 3 * std
 
-        original = df[col].copy()
-
+        # Apply chosen method
         if method == "cap":
-            df[col] = np.clip(df[col], lower, upper)
-            capped = (original != df[col]).sum()
-            outlier_counts_capped[col] = int(capped)
-        elif method == "remove":
-            df = df[(df[col] >= lower) & (df[col] <= upper)]
-            # Since rows are dropped, can't count per column anymore
+            # Clip values and count how many changed
+            original = df_copy[col].copy()
+            df_copy[col] = df_copy[col].clip(lower, upper)
+            capped_counts[col] = int((original != df_copy[col]).sum())
+
+        else:  # method == "remove"
+            # Filter rows, will drop any out-of-bounds
+            df_copy = df_copy[(df_copy[col] >= lower) & (df_copy[col] <= upper)]
 
         outlier_cols_handled.append(col)
 
-    logger.info(
-        f"📉 Outlier handling complete for: {outlier_cols_handled} using method: {method}"
-    )
-
-    return df, {
+    # === Build summary ===
+    summary = {
         "outlier_method": method,
         "columns": outlier_cols_handled,
-        "capped_counts": (
-            outlier_counts_capped if method == "cap" else "rows_removed_globally"
-        ),
     }
+
+    if method == "cap":
+        summary["capped_counts"] = capped_counts
+    else:  # remove
+        final_rows = len(df_copy)
+        summary["rows_removed"] = initial_rows - final_rows
+
+    logger.info(
+        f"Outlier handling ({method}) done on {outlier_cols_handled}."
+        + (
+            f" Capped: {capped_counts}"
+            if method == "cap"
+            else f" Rows removed: {summary['rows_removed']}"
+        )
+    )
+
+    return df_copy, summary
 
 
 def fix_inconsistencies(df, inconsistencies):
@@ -147,7 +171,7 @@ def clean_data(
 
     # Step 1: Impute missing values (after dropping high-missing columns)
     df, missing_summary = impute_missing_values(
-        df, threshold=missing_thresh, imputation_strategy=imputation_strategy  # <-- NEW
+        df, threshold=missing_thresh, imputation_strategy=imputation_strategy
     )
 
     # Step 2: Remove duplicates

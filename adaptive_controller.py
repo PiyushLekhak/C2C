@@ -17,7 +17,6 @@ DEFAULT_POLICY = {
 THRESHOLDS = {
     "missing_pct": 0.3,
     "skew_mean": 2.0,
-    "outlier_count": 0.1 * 10000,  # assuming 10k rows
 }
 
 
@@ -33,6 +32,12 @@ def reflect_and_adapt(latest_metrics):
 
     policy = DEFAULT_POLICY.copy()
 
+    # Pull the true row count (guaranteed present now)
+    n_rows = latest_metrics["profile_shape"][0]
+
+    # 10% of rows, but at least 5 to avoid tiny thresholds
+    dynamic_thresh = max(int(0.1 * n_rows), 5)
+
     if latest_metrics.get("missing_pct_before", 0) > THRESHOLDS["missing_pct"]:
         policy["imputation_strategy"] = "median"
         logger.info("📌 High missing % → using median imputation")
@@ -41,9 +46,9 @@ def reflect_and_adapt(latest_metrics):
         policy["imputation_strategy"] = "median"
         logger.info("📌 High skewness → using median imputation")
 
-    if latest_metrics.get("outliers_before", 0) > THRESHOLDS["outlier_count"]:
+    if latest_metrics.get("outliers_before", 0) > dynamic_thresh:
         policy["outlier_method"] = "remove"
-        logger.info("📌 Too many outliers → switching to remove")
+        logger.info(f"📌 Too many outliers (> {dynamic_thresh}) → switching to remove")
 
     logger.info(f"✅ Policy decided: {policy}")
     return policy

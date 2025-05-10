@@ -6,7 +6,7 @@ import seaborn as sns
 from event_logger import get_logger
 
 logger = get_logger("data_profiler")
-KURTOSIS_THRESHOLD = 0  # Used to decide between IQR vs Z-score for outlier detection
+KURTOSIS_THRESHOLD = 3  # Used to decide between IQR vs Z-score for outlier detection
 
 
 def profile_data(df, save_path="plots", target_column=None):
@@ -58,11 +58,13 @@ def profile_data(df, save_path="plots", target_column=None):
     skewness = df[numeric_cols].skew().to_dict()
 
     # === 7. Correlation Heatmap ===
-    corr = df[numeric_cols].corr()
+    avg_abs_skew = np.mean([abs(v) for v in skewness.values()])
+    correlation_method = "spearman" if avg_abs_skew > 0.8 else "pearson"
+    corr = df[numeric_cols].corr(method=correlation_method)
     heatmap_path = os.path.join(save_path, "correlation_heatmap.png")
     plt.figure(figsize=(10, 8))
     sns.heatmap(corr, cmap="coolwarm", annot=False)
-    plt.title("Correlation Heatmap")
+    plt.title(f"Correlation Heatmap ({correlation_method.capitalize()})")
     plt.tight_layout()
     plt.savefig(heatmap_path)
     plt.close()
