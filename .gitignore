@@ -4,3 +4,4 @@ logs/
 __pycache__/
 plots/
 reports/
+outputs/
