@@ -25,6 +25,7 @@ def run_pipeline(
     skip_cols_text,
     contamination_rate,
     top_n_anomalies,
+    clean_anomalies,  # ✅ New param
 ):
     try:
 
@@ -69,11 +70,18 @@ def run_pipeline(
         X_with_flags = df_with_anomalies.copy()
         X_with_flags["__target__"] = y
 
-        normal_mask = ~X_with_flags["is_anomaly"]
-        X_normal = X_with_flags.loc[normal_mask].drop(
-            columns=["anomaly_score", "is_anomaly", "__target__"]
-        )
-        y_normal = X_with_flags.loc[normal_mask, "__target__"]
+        if clean_anomalies:
+            X_to_clean = X_with_flags.drop(
+                columns=["anomaly_score", "is_anomaly", "__target__"]
+            )
+            y_to_clean = X_with_flags["__target__"]
+        else:
+            normal_mask = ~X_with_flags["is_anomaly"]
+            X_to_clean = X_with_flags.loc[normal_mask].drop(
+                columns=["anomaly_score", "is_anomaly", "__target__"]
+            )
+            y_to_clean = X_with_flags.loc[normal_mask, "__target__"]
+
         anomalies_df = df_with_anomalies.loc[X_with_flags["is_anomaly"]].copy()
         anomalies_df[target_column] = y.loc[anomalies_df.index]
 
@@ -97,22 +105,16 @@ def run_pipeline(
             }
         )
 
-        X_cleaned_normal, cleaning_summary = clean_data(
-            X_normal,
+        X_cleaned, cleaning_summary = clean_data(
+            X_to_clean,
             profiling_report=profile_before,
             outlier_method=policy.get("outlier_method", "cap"),
             missing_thresh=missing_thresh,
             imputation_strategy=policy.get("imputation_strategy", "mean"),
         )
 
-        cleaned_full = pd.concat(
-            [
-                X_cleaned_normal,
-                anomalies_df.drop(columns=["anomaly_score", "is_anomaly"]),
-            ],
-            axis=0,
-        ).sort_index()
-        cleaned_full[target_column] = y.loc[cleaned_full.index]
+        cleaned_full = X_cleaned.copy()
+        cleaned_full[target_column] = y_to_clean
 
         profile_after = profile_data(
             cleaned_full, save_path="plots", target_column=target_column
@@ -168,7 +170,6 @@ def run_pipeline(
 with gr.Blocks() as demo:
     gr.Markdown("# 🧼 C2C: Agentic Data Cleaning UI")
     with gr.Tabs() as tabs:
-        # Tab 0: Configuration
         with gr.Tab("Configuration"):
             dataset_file = gr.File(label="Upload Dataset (CSV/Excel/JSON)")
             target_column = gr.Textbox(label="Target Column", placeholder="e.g. income")
@@ -197,10 +198,12 @@ with gr.Blocks() as demo:
             top_n_anomalies = gr.Slider(
                 1, 20, step=1, value=10, label="Top N Anomalies to Show"
             )
+            clean_anomalies = gr.Checkbox(  # ✅ New checkbox
+                label="Clean Anomalous Records Too", value=False
+            )
             status_box = gr.Textbox(label="Status", interactive=False)
             run_btn = gr.Button("Run Pipeline")
 
-        # Tab 1: Results
         with gr.Tab("Results"):
             report_file = gr.File(label="Download HTML Report")
             cleaned_out = gr.File(label="Download Cleaned Data")
@@ -214,28 +217,9 @@ with gr.Blocks() as demo:
             message, cleaned_file, anomaly_file, top_features, report_path = (
                 run_pipeline(*args)
             )
-
-            html_link = (
-                f"<a href='{report_path}' download target='_blank'>📝 Download HTML Report</a>"
-                if report_path and os.path.exists(report_path)
-                else "<i>No report available</i>"
-            )
-
-            return (
-                message,
-                cleaned_file,
-                anomaly_file,
-                top_features,
-                report_path,
-            )
+            return message, cleaned_file, anomaly_file, top_features, report_path
         except Exception as e:
-            return (
-                f"❌ Pipeline failed: {str(e)}",
-                None,
-                None,
-                [],
-                None,
-            )
+            return f"❌ Pipeline failed: {str(e)}", None, None, [], None
 
     run_btn.click(
         fn=pipeline_with_ui_feedback,
@@ -253,6 +237,7 @@ with gr.Blocks() as demo:
             skip_cols_text,
             contamination_rate,
             top_n_anomalies,
+            clean_anomalies,  # ✅ Included here
         ],
         outputs=[
             status_box,

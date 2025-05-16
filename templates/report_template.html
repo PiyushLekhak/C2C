@@ -31,12 +31,6 @@
       margin-bottom: 20px;
     }
 
-    .flex-col {
-      flex: 1;
-      padding: 0 5px;
-      text-align: center;
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -95,7 +89,7 @@
       <li><strong>Total Outliers Before:</strong> {{ cleaning_eval.outliers_before }}</li>
       <li><strong>Total Outliers After:</strong> {{ cleaning_eval.outliers_after }}</li>
       <li><strong>Final Dataset Shape:</strong> {{ cleaning_eval.final_shape }}</li>
-      <li><strong>Policy Used:</strong> {{ policy_info.imputation_strategy }}, {{ policy_info.outlier_method }}, {{ policy_info.scale_method }}</li>
+      <li><strong>Policy Used:</strong> {{ policy_info.imputation_strategy }}, {{ policy_info.outlier_method }}</li>
     </ul>
   </div>
 
@@ -115,16 +109,16 @@
     <h2>2. Data Profiling (After Cleaning)</h2>
 
     <div class="flex-row">
-      {% if profiling_after.target_distribution_path %}
+      {% if target_distribution_data %}
       <div class="image-container">
         <h3>Target Distribution</h3>
-        <img src="{{ profiling_after.target_distribution_path }}" alt="Target Distribution After Cleaning" />
+        <img src="{{ target_distribution_data }}" alt="Target Distribution After Cleaning" />
       </div>
       {% endif %}
     
       <div class="image-container">
         <h3>Correlation Heatmap</h3>
-        <img src="{{ profiling_after.correlation_heatmap_path }}" alt="Correlation Heatmap After Cleaning" />
+        <img src="{{ correlation_heatmap_data }}" alt="Correlation Heatmap After Cleaning" />
       </div>
     </div>
 
@@ -236,14 +230,14 @@
     {% if anomaly_summary.total_anomalies_flagged > 0 %}
       <p><strong>Total Anomalies Flagged:</strong> {{ anomaly_summary.total_anomalies_flagged }}</p>
       <p><strong>Contamination Rate:</strong> {{ (anomaly_summary.contamination_rate * 100) | round(2) }}%</p>
-      {% if anomaly_plot_path %}
-        <img src="{{ anomaly_plot_path }}" alt="Anomaly Plot">
+      {% if anomaly_plot_data %}
+        <img src="{{ anomaly_plot_data }}" alt="Anomaly Plot">
       {% endif %}
     {% else %}
       <p>No anomalies detected or anomaly detection was skipped.</p>
     {% endif %}
     {% if anomaly_report %}
-    <h3>Top 5 Anomalous Records</h3>
+    <h3>Top N Anomalous Records</h3>
     <table>
       <tr>
         {% for col in anomaly_report[0].keys() %}
@@ -265,7 +259,7 @@
   <!-- Section 6: Feature Importance -->
   <div class="section">
     <h2>6. Feature Importance</h2>
-    <img src="{{ feature_importance_path }}" alt="Feature Importance Plot">
+    <img src="{{ feature_importance_data }}" alt="Feature Importance Plot">
   </div>
 
   <!-- Section 7: Policy Info -->
