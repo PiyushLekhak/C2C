@@ -11,7 +11,6 @@ HISTORY_LOG_PATH = "logs/cleaning_metrics.jsonl"
 DEFAULT_POLICY = {
     "imputation_strategy": "mean",
     "outlier_method": "cap",
-    "scale_method": "standard",
 }
 
 THRESHOLDS = {
@@ -32,10 +31,7 @@ def reflect_and_adapt(latest_metrics):
 
     policy = DEFAULT_POLICY.copy()
 
-    # Pull the true row count (guaranteed present now)
     n_rows = latest_metrics["profile_shape"][0]
-
-    # 10% of rows, but at least 5 to avoid tiny thresholds
     dynamic_thresh = max(int(0.1 * n_rows), 5)
 
     if latest_metrics.get("missing_pct_before", 0) > THRESHOLDS["missing_pct"]:

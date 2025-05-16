@@ -1,6 +1,9 @@
 import os
 import numpy as np
 import pandas as pd
+import matplotlib
+
+matplotlib.use("Agg")  # Use non-interactive backend before importing pyplot
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder

@@ -1,61 +1,64 @@
-# May switch to isolation forest if time allows
-# Need to encode categorical variables too
 import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.ensemble import IsolationForest
+from sklearn.impute import SimpleImputer
 from event_logger import get_logger
 
 logger = get_logger("anomaly_detector")
 
 
-def detect_anomalies_with_knn(
-    df, k=5, scale_method="standard", contamination=0.05, save_path="plots"
+def detect_anomalies_with_isolation_forest(
+    df,
+    contamination=0.05,
+    save_path="plots",
+    random_state=42,
+    target_column=None,
+    target_values=None,
 ):
     """
-    Detects anomalies using KNN-based distance method.
+    Detect anomalies using Isolation Forest with basic categorical encoding.
     Returns:
-        df_post (pd.DataFrame): Same data with anomaly columns added
-        anomaly_summary (dict): Summary info for reporting
-        anomaly_report (pd.DataFrame): Full score + is_anomaly table
+        df_post (pd.DataFrame): Original data with 'anomaly_score' and 'is_anomaly'
+        anomaly_summary (dict): Metadata for reporting
+        anomaly_report (pd.DataFrame): Table with scores + anomaly flags
     """
-    logger.info("🔍 Starting KNN-based anomaly detection...")
+    logger.info("🌲 Starting Isolation Forest-based anomaly detection...")
 
-    df_numeric = df.select_dtypes(include=[np.number]).copy()
+    # === Encode categoricals ===
+    df_encoded = pd.get_dummies(df, drop_first=True)
 
-    # === Scale numeric data ===
-    if scale_method == "standard":
-        scaler = StandardScaler()
-    elif scale_method == "minmax":
-        scaler = MinMaxScaler()
-    else:
-        raise ValueError("Invalid scale_method. Choose 'standard' or 'minmax'.")
-
-    df_scaled = pd.DataFrame(
-        scaler.fit_transform(df_numeric), columns=df_numeric.columns
+    # === Handle missing values for fitting ===
+    imputer = SimpleImputer(strategy="mean")
+    df_imputed = pd.DataFrame(
+        imputer.fit_transform(df_encoded), columns=df_encoded.columns, index=df.index
     )
 
-    # === KNN distances ===
-    nbrs = NearestNeighbors(n_neighbors=k + 1)
-    nbrs.fit(df_scaled)
-    distances, _ = nbrs.kneighbors(df_scaled)
-    scores = distances[:, 1:].mean(axis=1)
+    # === Isolation Forest ===
+    iso = IsolationForest(
+        contamination=contamination, random_state=random_state, n_jobs=-1, verbose=0
+    )
+    iso.fit(df_imputed)
 
-    # === Determine threshold ===
-    threshold = np.percentile(scores, 100 * (1 - contamination))
-    anomaly_flags = scores > threshold
+    scores = -iso.decision_function(df_imputed)  # higher = more anomalous
+    flags = iso.predict(df_imputed)  # -1 = anomaly, 1 = normal
+    anomaly_flags = flags == -1
 
-    # === Save score distribution plot ===
+    # === Save distribution plot ===
     os.makedirs(save_path, exist_ok=True)
     plot_path = os.path.join(save_path, "anomaly_score_distribution.png")
 
     plt.figure(figsize=(8, 5))
-    sns.histplot(scores, kde=True, bins=30)
-    plt.axvline(threshold, color="red", linestyle="--", label="Anomaly Threshold")
-    plt.title("Anomaly Score Distribution")
+    sns.histplot(scores, bins=30, kde=True)
+    plt.axvline(
+        np.percentile(scores, 100 * (1 - contamination)),
+        color="red",
+        linestyle="--",
+        label="Anomaly Threshold",
+    )
+    plt.title("Isolation Forest Anomaly Scores")
     plt.xlabel("Anomaly Score")
     plt.ylabel("Frequency")
     plt.legend()
@@ -65,10 +68,13 @@ def detect_anomalies_with_knn(
 
     logger.info(f"📊 Anomaly score distribution plot saved to {plot_path}")
 
-    # === Add columns to original dataframe ===
+    # === Add to original DataFrame ===
     df_post = df.copy()
     df_post["anomaly_score"] = scores
     df_post["is_anomaly"] = anomaly_flags
+
+    if target_column and target_values is not None:
+        df_post[target_column] = target_values
 
     anomaly_summary = {
         "total_anomalies_flagged": int(anomaly_flags.sum()),
@@ -76,12 +82,9 @@ def detect_anomalies_with_knn(
         "anomaly_plot_path": os.path.relpath(plot_path, start="reports"),
     }
 
-    anomaly_report = pd.DataFrame(
-        {"anomaly_score": scores, "is_anomaly": anomaly_flags}, index=df.index
-    )
+    anomaly_report = df_post.copy()
+    anomaly_report = anomaly_report.sort_values(by="anomaly_score", ascending=False)
 
-    logger.info(
-        f"✅ Anomaly detection complete. {anomaly_flags.sum()} anomalies flagged."
-    )
+    logger.info(f"✅ Isolation Forest flagged {anomaly_flags.sum()} anomalies.")
 
     return df_post, anomaly_summary, anomaly_report

@@ -71,26 +71,36 @@ def clean_duplicates(df):
     return df_clean, removed
 
 
-def clean_outliers(df, profiling_results, method="cap"):
+def clean_outliers(df, profiling_results, method="cap", skip_cols=None):
     """
-    Handles outliers by either capping or removing rows.
+    Handles outliers by either capping, removing, or skipping.
     Returns:
         - df_cleaned: DataFrame after outlier treatment
-        - summary: dict with
-            - outlier_method: "cap" or "remove"
+        - summary: dict with:
+            - outlier_method: "cap", "remove", or "skip"
             - columns: list of columns processed
             - capped_counts (if cap): dict of {col: # capped}
             - rows_removed (if remove): total rows dropped
     """
+    if method == "skip":
+        logger.info("⏭️ Outlier handling skipped by policy.")
+        return df.copy(), {
+            "outlier_method": "skip",
+            "columns": [],
+        }
+
     df_copy = df.copy()
     outlier_cols_handled = []
     capped_counts = {}
+    skip_cols = set(skip_cols or [])
 
-    # === If remove mode, capture initial row count ===
     initial_rows = len(df_copy)
 
     for col, info in profiling_results.items():
         if col not in df_copy.columns or info.get("count", 0) == 0:
+            continue
+        if col in skip_cols:
+            logger.info(f"⏭️ Skipping outlier treatment for column: {col}")
             continue
 
         # Determine cutoffs
@@ -99,25 +109,20 @@ def clean_outliers(df, profiling_results, method="cap"):
             Q3 = df_copy[col].quantile(0.75)
             IQR = Q3 - Q1
             lower, upper = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR
-        else:  # "zscore"
+        else:  # Z-score
             mean = df_copy[col].mean()
             std = df_copy[col].std()
             lower, upper = mean - 3 * std, mean + 3 * std
 
-        # Apply chosen method
         if method == "cap":
-            # Clip values and count how many changed
             original = df_copy[col].copy()
             df_copy[col] = df_copy[col].clip(lower, upper)
             capped_counts[col] = int((original != df_copy[col]).sum())
-
-        else:  # method == "remove"
-            # Filter rows, will drop any out-of-bounds
+        elif method == "remove":
             df_copy = df_copy[(df_copy[col] >= lower) & (df_copy[col] <= upper)]
 
         outlier_cols_handled.append(col)
 
-    # === Build summary ===
     summary = {
         "outlier_method": method,
         "columns": outlier_cols_handled,
@@ -125,7 +130,7 @@ def clean_outliers(df, profiling_results, method="cap"):
 
     if method == "cap":
         summary["capped_counts"] = capped_counts
-    else:  # remove
+    elif method == "remove":
         final_rows = len(df_copy)
         summary["rows_removed"] = initial_rows - final_rows
 
@@ -134,7 +139,7 @@ def clean_outliers(df, profiling_results, method="cap"):
         + (
             f" Capped: {capped_counts}"
             if method == "cap"
-            else f" Rows removed: {summary['rows_removed']}"
+            else f" Rows removed: {summary.get('rows_removed', 0)}"
         )
     )
 
@@ -182,6 +187,7 @@ def clean_data(
         df,
         profiling_report.get("outliers", {}),
         method=outlier_method,
+        skip_cols=profiling_report.get("outlier_skip_cols", []),
     )
 
     # Step 4: Fix categorical inconsistencies
