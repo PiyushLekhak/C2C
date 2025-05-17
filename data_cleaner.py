@@ -198,9 +198,19 @@ def clean_data(
 
     # Step 5: Ensure no remaining numeric NaNs (last safety)
     num_cols = df.select_dtypes(include="number").columns
-    if df[num_cols].isnull().any().any():
-        df[num_cols] = df[num_cols].fillna(df[num_cols].mean())
-        logger.info("🧯 Final fill of remaining numeric NaNs with column means.")
+    remaining_nans = df[num_cols].isnull().sum()
+
+    for col, count in remaining_nans.items():
+        if count > 0:
+            skew = df[col].dropna().skew()  # Calculate skewness
+            if abs(skew) > 1:  # If skew is significant, use median
+                fill_val = df[col].median()
+                method = "median (skew-aware final)"
+            else:  # Otherwise, use mean
+                fill_val = df[col].mean()
+                method = "mean (final)"
+            df[col].fillna(fill_val, inplace=True)
+            logger.info(f"🧯 Final fill of {count} NaNs in '{col}' using {method}")
 
     cleaning_summary = {
         "missing_handling": missing_summary,

@@ -88,3 +88,25 @@ def detect_anomalies_with_isolation_forest(
     logger.info(f"✅ Isolation Forest flagged {anomaly_flags.sum()} anomalies.")
 
     return df_post, anomaly_summary, anomaly_report
+
+
+def get_anomaly_flags(df, contamination=0.05, random_state=42):
+    """
+    Return a boolean Series indexed like df where True == anomaly.
+    Uses mean-imputed + one-hot encoded copy internally so original df is never changed.
+    """
+    _, summary, _ = detect_anomalies_with_isolation_forest(
+        df.copy(),  # work on copy
+        contamination=contamination,
+        save_path="plots",
+        random_state=random_state,
+    )
+    # summary already contains 'anomaly_plot_path';
+    # we still need the flags – easiest is to call the main fn once more and grab flags:
+    df_post, _, _ = detect_anomalies_with_isolation_forest(
+        df.copy(),
+        contamination=contamination,
+        save_path="plots",
+        random_state=random_state,
+    )
+    return df_post["is_anomaly"]
