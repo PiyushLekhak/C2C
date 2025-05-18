@@ -101,10 +101,50 @@
   <div class="section">
     <h2>1. Data Profiling (Before Cleaning)</h2>
     <table>
-      <tr><th>Missing Values</th><td>{{ profiling_before.missing_values }}</td></tr>
-      <tr><th>Duplicate Rows</th><td>{{ profiling_before.duplicate_rows }}</td></tr>
-      <tr><th>Outliers</th><td>{{ profiling_before.outliers }}</td></tr>
-      <tr><th>Inconsistencies</th><td>{{ profiling_before.inconsistencies }}</td></tr>
+          <tr>
+      <th>Missing Values</th>
+      <td>
+        <ul style="margin:0; padding-left:1em; list-style-type:disc;">
+          {% for feature, count in profiling_before.missing_values.items() %}
+            <li><strong>{{ feature }}:</strong> {{ count }}</li>
+          {% endfor %}
+        </ul>
+      </td>
+    </tr>
+    <tr><th>Duplicate Rows</th><td>{{ profiling_before.duplicate_rows }}</td></tr>
+    <tr>
+      <th>Outliers</th>
+      <td>
+        <table>
+          <thead>
+            <tr><th>Feature</th><th>Method</th><th>Count</th></tr>
+          </thead>
+          <tbody>
+            {% for feature, info in profiling_before.outliers.items() %}
+            <tr>
+              <td>{{ feature }}</td>
+              <td>{{ info.method }}</td>
+              <td>{{ info.count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <th>Inconsistencies</th>
+      <td>
+        {% if profiling_before.inconsistencies %}
+          <ul style="margin:0; padding-left:1em; list-style-type:disc;">
+            {% for col, vals in profiling_before.inconsistencies.items() %}
+              <li><strong>{{ col }}:</strong> {{ vals | join(", ") }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          None
+        {% endif %}
+      </td>
+    </tr>
     </table>
   </div>
 
@@ -148,10 +188,50 @@
 
     <h3>Summary Stats</h3>
     <table>
-      <tr><th>Missing Values</th><td>{{ profiling_after.missing_values }}</td></tr>
-      <tr><th>Duplicate Rows</th><td>{{ profiling_after.duplicate_rows }}</td></tr>
-      <tr><th>Outliers</th><td>{{ profiling_after.outliers }}</td></tr>
-      <tr><th>Inconsistencies</th><td>{{ profiling_after.inconsistencies }}</td></tr>
+          <tr>
+      <th>Missing Values</th>
+      <td>
+        <ul style="margin:0; padding-left:1em; list-style-type:disc;">
+          {% for feature, count in profiling_after.missing_values.items() %}
+            <li><strong>{{ feature }}:</strong> {{ count }}</li>
+          {% endfor %}
+        </ul>
+      </td>
+    </tr>
+    <tr><th>Duplicate Rows</th><td>{{ profiling_after.duplicate_rows }}</td></tr>
+    <tr>
+      <th>Outliers</th>
+      <td>
+        <table>
+          <thead>
+            <tr><th>Feature</th><th>Method</th><th>Count</th></tr>
+          </thead>
+          <tbody>
+            {% for feature, info in profiling_after.outliers.items() %}
+            <tr>
+              <td>{{ feature }}</td>
+              <td>{{ info.method }}</td>
+              <td>{{ info.count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <th>Inconsistencies</th>
+      <td>
+        {% if profiling_after.inconsistencies %}
+          <ul style="margin:0; padding-left:1em; list-style-type:disc;">
+            {% for col, vals in profiling_after.inconsistencies.items() %}
+              <li><strong>{{ col }}:</strong> {{ vals | join(", ") }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          None
+        {% endif %}
+      </td>
+    </tr>
     </table>
   </div>
 

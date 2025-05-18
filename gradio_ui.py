@@ -188,7 +188,7 @@ def run_pipeline(
 
 # ───────── Gradio App ─────────
 with gr.Blocks() as demo:
-    gr.Markdown("# 🧼 C2C: Agentic Data Cleaning UI")
+    gr.Markdown("# 🧼 C2C: Agentic Data Cleaning AI")
 
     with gr.Tabs():
         with gr.Tab("Configuration"):
