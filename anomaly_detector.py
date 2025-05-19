@@ -95,12 +95,6 @@ def get_anomaly_flags(df, contamination=0.05, random_state=42):
     Return a boolean Series indexed like df where True == anomaly.
     Uses mean-imputed + one-hot encoded copy internally so original df is never changed.
     """
-    _, summary, _ = detect_anomalies_with_isolation_forest(
-        df.copy(),  # work on copy
-        contamination=contamination,
-        save_path="plots",
-        random_state=random_state,
-    )
     df_post, _, _ = detect_anomalies_with_isolation_forest(
         df.copy(),
         contamination=contamination,
